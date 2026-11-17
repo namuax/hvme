@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "humm"
+version = "0.1.0"
+description = "Verifiable causal graphs, a tool-using causal reasoning LLM and a symbolic causal engine, tied together by an orchestrator and an MCP server"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = [
+  "networkx>=3.3",
+  "pydantic>=2.6",
+  "numpy",
+  "pandas",
+  "scipy",
+]
+keywords = ["causal inference", "causal discovery", "llm", "mcp", "do-calculus"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+bench = ["pgmpy>=1.0"]
+hf = ["torch>=2.7", "transformers>=5.2", "accelerate"]
+vllm = ["transformers>=5.2"]  # OpenAI 호환 서버(vLLM) 클라이언트, 토크나이저만 쓴다
+api = ["anthropic"]
+mcp = ["mcp>=1.2,<2"]
+causal = ["dowhy", "causal-learn", "econml"]
+dev = ["pytest", "nbformat", "jupyter"]
+
+[project.urls]
+Repository = "https://github.com/no-wave/humm"
+
+[project.scripts]
+humm-mcp = "humm.mcp.server:main"
+
+[tool.setuptools.packages.find]
+include = ["humm*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

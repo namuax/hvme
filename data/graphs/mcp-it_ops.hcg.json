@@ -1,0 +1,869 @@
+{
+  "graph_id": "mcp-it_ops",
+  "nodes": [
+    {
+      "id": "config_change",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "구성 변경",
+        "설정 변경"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc06"
+        }
+      ]
+    },
+    {
+      "id": "cpu",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "CPU 사용률",
+        "프로세서 부하"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc05"
+        }
+      ]
+    },
+    {
+      "id": "deploy",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "릴리스 횟수",
+        "배포 빈도"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc05"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc06"
+        }
+      ]
+    },
+    {
+      "id": "error_rate",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "에러 비율",
+        "오류율"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc05"
+        }
+      ]
+    },
+    {
+      "id": "latency",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "응답 시간",
+        "응답 지연"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc05"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc06"
+        }
+      ]
+    },
+    {
+      "id": "memory_leak",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "메모리 누수",
+        "메모리 누출"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc08"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc09"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc10"
+        }
+      ]
+    },
+    {
+      "id": "outage",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "서비스 장애",
+        "장애 건수"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc05"
+        }
+      ]
+    },
+    {
+      "id": "traffic",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "요청 트래픽",
+        "유입 트래픽"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc05"
+        },
+        {
+          "kind": "text",
+          "ref": "it_ops-ko-doc06"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "src": "config_change",
+      "dst": "error_rate",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.6,
+          "ref": "it_ops-ko-doc00",
+          "span": "구성 변경이 증가하면서 오류율이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.6,
+          "ref": "it_ops-ko-doc04",
+          "span": "구성 변경이 증가하면서 에러 비율이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.6,
+          "ref": "it_ops-ko-doc11",
+          "span": "설정 변경 증가가 에러 비율 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9932891136,
+      "status": "supported"
+    },
+    {
+      "src": "config_change",
+      "dst": "outage",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:meek"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc07",
+          "span": "구성 변경은 장애 건수를 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc08",
+          "span": "장애 건수는 설정 변경 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc11",
+          "span": "설정 변경이 증가하면서 서비스 장애가 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9957408,
+      "status": "supported"
+    },
+    {
+      "src": "error_rate",
+      "dst": "outage",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.463,
+          "ref": "it_ops-ko-doc02",
+          "span": "에러 비율이 장애 건수에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.463,
+          "ref": "it_ops-ko-doc03",
+          "span": "에러 비율은 장애 건수를 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.463,
+          "ref": "it_ops-ko-doc05",
+          "span": "에러 비율이 늘면 서비스 장애도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9903569944307712,
+      "status": "supported"
+    },
+    {
+      "src": "deploy",
+      "dst": "config_change",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc06",
+          "span": "릴리스 횟수 증가가 구성 변경 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc07",
+          "span": "배포 빈도가 설정 변경에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc08",
+          "span": "릴리스 횟수 증가가 구성 변경 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "deploy",
+      "dst": "memory_leak",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc02",
+          "span": "메모리 누수는 릴리스 횟수 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc08",
+          "span": "릴리스 횟수가 메모리 누출에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc11",
+          "span": "배포 빈도가 늘면 메모리 누출도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "latency",
+      "dst": "cpu",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "latency",
+      "dst": "error_rate",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc08",
+          "span": "응답 시간 증가가 오류율 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc09",
+          "span": "응답 지연 증가가 오류율 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc10",
+          "span": "오류율은 응답 지연 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9957408,
+      "status": "supported"
+    },
+    {
+      "src": "memory_leak",
+      "dst": "latency",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc04",
+          "span": "응답 지연은 메모리 누출 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc08",
+          "span": "메모리 누출 증가가 응답 시간 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc10",
+          "span": "메모리 누출이 응답 지연에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "traffic",
+      "dst": "config_change",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc03",
+          "span": "유입 트래픽은 구성 변경을 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc06",
+          "span": "유입 트래픽이 설정 변경에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc10",
+          "span": "요청 트래픽이 증가하면서 설정 변경이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "traffic",
+      "dst": "cpu",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc03",
+          "span": "유입 트래픽이 프로세서 부하를 변화시킬 수도 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc04",
+          "span": "유입 트래픽이 늘면 프로세서 부하도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "it_ops-ko-doc08",
+          "span": "유입 트래픽 증가가 CPU 사용률 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "traffic",
+      "dst": "outage",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc04",
+          "span": "유입 트래픽이 증가하면서 서비스 장애가 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc05",
+          "span": "유입 트래픽이 늘면 장애 건수도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc11",
+          "span": "요청 트래픽은 장애 건수를 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9957408,
+      "status": "supported"
+    },
+    {
+      "src": "cpu",
+      "dst": "latency",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc05",
+          "span": "프로세서 부하는 응답 시간을 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc06",
+          "span": "응답 지연은 CPU 사용률 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "it_ops-ko-doc09",
+          "span": "응답 지연은 프로세서 부하 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.978704,
+      "status": "supported"
+    }
+  ],
+  "assumptions": [],
+  "provenance": {
+    "created": "2026-11-14",
+    "pipeline": "humm 0.0.1"
+  }
+}

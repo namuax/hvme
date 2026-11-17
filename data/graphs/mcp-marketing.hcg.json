@@ -1,0 +1,901 @@
+{
+  "graph_id": "mcp-marketing",
+  "nodes": [
+    {
+      "id": "ad_spend",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "광고 예산",
+        "광고비",
+        "마케팅 지출"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc06"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc07"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc08"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc10"
+        }
+      ]
+    },
+    {
+      "id": "churn",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "고객 이탈률",
+        "이탈률"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc06"
+        }
+      ]
+    },
+    {
+      "id": "conversion",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "구매 전환율",
+        "전환율"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc07"
+        }
+      ]
+    },
+    {
+      "id": "discount",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "프로모션 횟수",
+        "할인 행사"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc04"
+        }
+      ]
+    },
+    {
+      "id": "sales",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "매출",
+        "매출액",
+        "판매액"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc05"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc06"
+        }
+      ]
+    },
+    {
+      "id": "satisfaction",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "고객 만족도",
+        "만족도"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc05"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc07"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc08"
+        }
+      ]
+    },
+    {
+      "id": "season",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "계절 수요",
+        "성수기 수요"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc05"
+        }
+      ]
+    },
+    {
+      "id": "web_traffic",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "방문자 수",
+        "사이트 트래픽",
+        "웹 방문"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc05"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc06"
+        },
+        {
+          "kind": "text",
+          "ref": "marketing-ko-doc07"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "src": "ad_spend",
+      "dst": "sales",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc03",
+          "span": "광고 예산은 판매액을 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc06",
+          "span": "광고 예산이 매출액에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc10",
+          "span": "광고비가 증가하면서 매출이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "ad_spend",
+      "dst": "season",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "ad_spend",
+      "dst": "web_traffic",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc07",
+          "span": "마케팅 지출은 사이트 트래픽을 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc08",
+          "span": "방문자 수는 광고비 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc11",
+          "span": "광고 예산이 증가하면서 사이트 트래픽이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9957408,
+      "status": "supported"
+    },
+    {
+      "src": "conversion",
+      "dst": "sales",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.463,
+          "ref": "marketing-ko-doc04",
+          "span": "매출은 전환율 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.463,
+          "ref": "marketing-ko-doc08",
+          "span": "전환율 증가가 판매액 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.463,
+          "ref": "marketing-ko-doc10",
+          "span": "전환율이 매출에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9903569944307712,
+      "status": "supported"
+    },
+    {
+      "src": "conversion",
+      "dst": "discount",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "season",
+      "dst": "sales",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc00",
+          "span": "성수기 수요가 증가하면서 매출이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc04",
+          "span": "성수기 수요가 증가하면서 판매액이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc11",
+          "span": "계절 수요 증가가 판매액 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9957408,
+      "status": "supported"
+    },
+    {
+      "src": "web_traffic",
+      "dst": "sales",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc05",
+          "span": "방문자 수는 매출액을 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc06",
+          "span": "매출은 사이트 트래픽 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc09",
+          "span": "매출은 방문자 수 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9957408,
+      "status": "supported"
+    },
+    {
+      "src": "churn",
+      "dst": "satisfaction",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "discount",
+      "dst": "satisfaction",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc04",
+          "span": "프로모션 횟수가 증가하면서 고객 만족도가 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc05",
+          "span": "프로모션 횟수가 늘면 만족도도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "marketing-ko-doc11",
+          "span": "할인 행사는 만족도를 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.9957408,
+      "status": "supported"
+    },
+    {
+      "src": "discount",
+      "dst": "season",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "season",
+      "dst": "ad_spend",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc06",
+          "span": "성수기 수요 증가가 광고 예산 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc07",
+          "span": "계절 수요가 광고비에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc08",
+          "span": "성수기 수요 증가가 광고 예산 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "season",
+      "dst": "discount",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc02",
+          "span": "할인 행사는 성수기 수요 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc08",
+          "span": "성수기 수요가 프로모션 횟수에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc11",
+          "span": "계절 수요가 늘면 프로모션 횟수도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "discount",
+      "dst": "conversion",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc03",
+          "span": "프로모션 횟수가 전환율을 변화시킬 수도 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc04",
+          "span": "프로모션 횟수가 늘면 전환율도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "marketing-ko-doc08",
+          "span": "프로모션 횟수 증가가 구매 전환율 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "satisfaction",
+      "dst": "churn",
+      "sign": "-",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.6,
+          "ref": "marketing-ko-doc08",
+          "span": "고객 이탈률은 만족도 때문에 떨어졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.6,
+          "ref": "marketing-ko-doc09",
+          "span": "고객 이탈률은 고객 만족도 때문에 떨어졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.6,
+          "ref": "marketing-ko-doc10",
+          "span": "고객 만족도 증가는 고객 이탈률 감소로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.9932891136,
+      "status": "supported"
+    }
+  ],
+  "assumptions": [],
+  "provenance": {
+    "created": "2026-11-14",
+    "pipeline": "humm 0.0.1"
+  }
+}

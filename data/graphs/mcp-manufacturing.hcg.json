@@ -1,0 +1,959 @@
+{
+  "graph_id": "mcp-manufacturing",
+  "nodes": [
+    {
+      "id": "defect_rate",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "결함 비율",
+        "불량률"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc04"
+        }
+      ]
+    },
+    {
+      "id": "delivery_delay",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "납기 지연",
+        "출하 지연"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc05"
+        }
+      ]
+    },
+    {
+      "id": "downtime",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "다운타임",
+        "설비 가동 중단"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc05"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc06"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc07"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc08"
+        }
+      ]
+    },
+    {
+      "id": "equip_age",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "설비 노후도",
+        "장비 연식"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc04"
+        }
+      ]
+    },
+    {
+      "id": "maintenance",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "예방 정비",
+        "정비 빈도"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc06"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc07"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc08"
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "산출량",
+        "생산량"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc05"
+        }
+      ]
+    },
+    {
+      "id": "temperature",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "공정 온도",
+        "작업장 온도"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc00"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc01"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc03"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc04"
+        }
+      ]
+    },
+    {
+      "id": "vibration",
+      "label": "",
+      "type": "variable",
+      "dtype": "binary",
+      "aliases": [
+        "설비 진동",
+        "진동 수준"
+      ],
+      "source": [
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc02"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc04"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc05"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc06"
+        },
+        {
+          "kind": "text",
+          "ref": "manufacturing-ko-doc07"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "src": "delivery_delay",
+      "dst": "output",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:meek"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "hypothesis"
+    },
+    {
+      "src": "delivery_delay",
+      "dst": "defect_rate",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "output",
+      "dst": "downtime",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "downtime",
+      "dst": "vibration",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:meek"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "vibration",
+      "dst": "defect_rate",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc04",
+          "span": "진동 수준이 증가하면서 불량률이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc05",
+          "span": "진동 수준이 늘면 결함 비율도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc11",
+          "span": "설비 진동은 결함 비율을 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.9957408,
+      "status": "supported"
+    },
+    {
+      "src": "vibration",
+      "dst": "equip_age",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:meek"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "equip_age",
+      "dst": "defect_rate",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "text",
+          "score": 0.6,
+          "ref": "manufacturing-ko-doc00",
+          "span": "장비 연식이 증가하면서 불량률이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.6,
+          "ref": "manufacturing-ko-doc04",
+          "span": "장비 연식이 증가하면서 결함 비율이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.6,
+          "ref": "manufacturing-ko-doc11",
+          "span": "설비 노후도 증가가 결함 비율 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.9932891136,
+      "status": "supported"
+    },
+    {
+      "src": "maintenance",
+      "dst": "downtime",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 0.8,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc03",
+          "span": "정비 빈도는 다운타임을 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc06",
+          "span": "정비 빈도가 설비 가동 중단에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc10",
+          "span": "예방 정비가 증가하면서 설비 가동 중단이 커졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.98774973766144,
+      "status": "supported"
+    },
+    {
+      "src": "maintenance",
+      "dst": "equip_age",
+      "sign": "?",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.96,
+      "status": "refuted"
+    },
+    {
+      "src": "maintenance",
+      "dst": "vibration",
+      "sign": "-",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc07",
+          "span": "정비 빈도가 늘수록 진동 수준은 줄어든다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc08",
+          "span": "예방 정비 증가는 진동 수준 감소로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc11",
+          "span": "예방 정비 증가는 설비 진동 감소로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.9957408,
+      "status": "supported"
+    },
+    {
+      "src": "temperature",
+      "dst": "defect_rate",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:vstruct"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc03",
+          "span": "작업장 온도가 결함 비율을 변화시킬 수도 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc04",
+          "span": "작업장 온도가 늘면 결함 비율도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc08",
+          "span": "작업장 온도 증가가 불량률 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "downtime",
+      "dst": "output",
+      "sign": "-",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc08",
+          "span": "생산량은 다운타임 때문에 떨어졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc09",
+          "span": "생산량은 설비 가동 중단 때문에 떨어졌다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc10",
+          "span": "설비 가동 중단 증가는 생산량 감소로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.978704,
+      "status": "supported"
+    },
+    {
+      "src": "vibration",
+      "dst": "downtime",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc05",
+          "span": "진동 수준은 다운타임을 높인다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc06",
+          "span": "설비 가동 중단은 설비 진동 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.75,
+          "ref": "manufacturing-ko-doc09",
+          "span": "설비 가동 중단은 진동 수준 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.978704,
+      "status": "supported"
+    },
+    {
+      "src": "defect_rate",
+      "dst": "delivery_delay",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc04",
+          "span": "납기 지연은 결함 비율 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc08",
+          "span": "결함 비율 증가가 출하 지연 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc10",
+          "span": "결함 비율이 납기 지연에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "pc:extension"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.9931942987008,
+      "status": "supported"
+    },
+    {
+      "src": "equip_age",
+      "dst": "maintenance",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc06",
+          "span": "장비 연식 증가가 정비 빈도 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc07",
+          "span": "설비 노후도가 예방 정비에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc08",
+          "span": "장비 연식 증가가 정비 빈도 상승으로 이어진다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.965971493504,
+      "status": "supported"
+    },
+    {
+      "src": "equip_age",
+      "dst": "vibration",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc02",
+          "span": "설비 진동은 장비 연식 때문에 올라간다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc08",
+          "span": "장비 연식이 진동 수준에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.595,
+          "ref": "manufacturing-ko-doc11",
+          "span": "설비 노후도가 늘면 진동 수준도 증가한다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        },
+        {
+          "kind": "data",
+          "score": 1.0,
+          "ref": "n=8000",
+          "span": "",
+          "method": "ci:g_test"
+        }
+      ],
+      "confidence": 0.965971493504,
+      "status": "supported"
+    },
+    {
+      "src": "output",
+      "dst": "delivery_delay",
+      "sign": "-",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.463,
+          "ref": "manufacturing-ko-doc02",
+          "span": "산출량이 출하 지연에 영향을 줄 가능성이 있다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.463,
+          "ref": "manufacturing-ko-doc03",
+          "span": "산출량이 늘수록 출하 지연은 줄어든다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "text",
+          "score": 0.463,
+          "ref": "manufacturing-ko-doc05",
+          "span": "산출량은 납기 지연을 낮춘다.",
+          "method": "text:claim"
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "llm:counterfactual"
+        }
+      ],
+      "confidence": 0.7589248607692801,
+      "status": "refuted"
+    }
+  ],
+  "assumptions": [],
+  "provenance": {
+    "created": "2026-11-14",
+    "pipeline": "humm 0.0.1"
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "graph_id": "sales-demo",
+  "nodes": [
+    {
+      "id": "season",
+      "label": "계절",
+      "type": "variable",
+      "dtype": "continuous",
+      "aliases": [],
+      "source": []
+    },
+    {
+      "id": "ad",
+      "label": "광고비",
+      "type": "variable",
+      "dtype": "continuous",
+      "aliases": [],
+      "source": []
+    },
+    {
+      "id": "visits",
+      "label": "방문",
+      "type": "variable",
+      "dtype": "continuous",
+      "aliases": [],
+      "source": []
+    },
+    {
+      "id": "sales",
+      "label": "매출",
+      "type": "variable",
+      "dtype": "continuous",
+      "aliases": [],
+      "source": []
+    }
+  ],
+  "edges": [
+    {
+      "src": "season",
+      "dst": "ad",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "성수기에 광고 예산을 늘린다",
+      "evidence": [
+        {
+          "kind": "expert",
+          "score": 0.9,
+          "ref": "마케팅팀 인터뷰",
+          "span": "",
+          "method": ""
+        }
+      ],
+      "confidence": 0.7200000000000001,
+      "status": "hypothesis"
+    },
+    {
+      "src": "ad",
+      "dst": "visits",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "노출이 늘면 방문이 는다",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.8,
+          "ref": "report_07.pdf#p3",
+          "span": "",
+          "method": ""
+        },
+        {
+          "kind": "data",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": "PC+BK"
+        }
+      ],
+      "confidence": 0.8544,
+      "status": "supported"
+    },
+    {
+      "src": "visits",
+      "dst": "sales",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "방문이 구매로 전환된다",
+      "evidence": [
+        {
+          "kind": "text",
+          "score": 0.7,
+          "ref": "",
+          "span": "",
+          "method": ""
+        },
+        {
+          "kind": "llm_prior",
+          "score": 0.9,
+          "ref": "",
+          "span": "",
+          "method": ""
+        }
+      ],
+      "confidence": 0.6288,
+      "status": "supported"
+    },
+    {
+      "src": "season",
+      "dst": "sales",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "성수기에는 수요 자체가 크다",
+      "evidence": [
+        {
+          "kind": "llm_prior",
+          "score": 0.6,
+          "ref": "",
+          "span": "",
+          "method": ""
+        }
+      ],
+      "confidence": 0.24,
+      "status": "hypothesis"
+    },
+    {
+      "src": "sales",
+      "dst": "ad",
+      "sign": "+",
+      "lag": 0,
+      "mechanism": "",
+      "evidence": [
+        {
+          "kind": "llm_prior",
+          "score": 0.3,
+          "ref": "",
+          "span": "",
+          "method": ""
+        }
+      ],
+      "confidence": 0.12,
+      "status": "refuted"
+    }
+  ],
+  "assumptions": [
+    "계절 외의 숨은 공통 원인은 없다"
+  ],
+  "provenance": {
+    "created": "2026-10-24",
+    "pipeline": "humm 0.0.1"
+  }
+}
