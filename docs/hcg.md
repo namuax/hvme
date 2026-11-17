@@ -1,6 +1,6 @@
 # HCG: the causal graph format
 
-An HCG is a JSON document validated by pydantic (`humm.graph.schema.HCG`). It is the single object that graph construction writes, validation updates and the engine reads.
+An HCG is a JSON document validated by pydantic (`hvme.graph.schema.HCG`). It is the single object that graph construction writes, validation updates and the engine reads.
 
 ```json
 {
@@ -16,7 +16,7 @@ An HCG is a JSON document validated by pydantic (`humm.graph.schema.HCG`). It is
      "confidence": 0.993, "status": "supported"}
   ],
   "assumptions": ["no unobserved confounding between ad_spend and sales"],
-  "provenance": {"created": "2026-11-17", "pipeline": "humm 0.1.0"}
+  "provenance": {"created": "2026-11-17", "pipeline": "hvme 0.1.0"}
 }
 ```
 
@@ -48,4 +48,4 @@ An edge supported only by an LLM prior keeps that single evidence kind, so it ca
 - Edge endpoints must be node ids.
 - `refuted` edges stay in the file with their evidence; the engine ignores them.
 
-Use `HCG.load(path)`, `hcg.save(path)` and `humm.api.graph_summary(hcg)`.
+Use `HCG.load(path)`, `hcg.save(path)` and `hvme.api.graph_summary(hcg)`.

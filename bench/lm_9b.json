@@ -1,5 +1,5 @@
 {
- "model": "humm LM 9B (Qwen3.5-9B + LoRA, tool mode)",
+ "model": "hvme LM 9B (Qwen3.5-9B + LoRA, tool mode)",
  "harness": "vLLM 0.33 bf16, greedy, tools on",
  "calm_lite": {
   "n": 1350,

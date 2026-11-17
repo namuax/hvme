@@ -4,7 +4,7 @@ import nbformat as nbf
 cells = [
 """md:# 05. DAG Validation — Falsifying a Graph with Data
 
-In principle, a causal graph cannot be "proven". We try to falsify it against data, knowledge and experiments, and only graphs that survive can be used. `humm.validate` implements three of the six validation layers, the ones that can be done with data alone.
+In principle, a causal graph cannot be "proven". We try to falsify it against data, knowledge and experiments, and only graphs that survive can be used. `hvme.validate` implements three of the six validation layers, the ones that can be done with data alone.
 
 | Layer | Content | Status |
 |---|---|---|
@@ -12,7 +12,7 @@ In principle, a causal graph cannot be "proven". We try to falsify it against da
 | L2 Data falsification | Local Markov condition (LMC) tests, permutation falsification test, edge dependence test, mechanism fit | Implemented |
 | L3 Knowledge | Text evidence, LLM counterfactual checks, expert review | Planned |
 | L4 Experiments | Compare interventional data with predicted effects | Planned |
-| L5 Conclusion robustness | Effect range over alternative graphs, refutation tests | Partly in `humm.engine.refute` |
+| L5 Conclusion robustness | Effect range over alternative graphs, refutation tests | Partly in `hvme.engine.refute` |
 | L6 Benchmark | SHD and SID against the ground-truth graph | Implemented (discovery algorithms are planned) |
 
 As seen in notebook 03, a graph that omits a confounder passes all the estimate refutation tests. Errors in the graph itself must be caught by L2 in this notebook.""",
@@ -21,10 +21,10 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from humm.engine import BinarySCM, LinearSCM
-from humm.graph import HCG, Evidence, EvidenceKind
-from humm.paths import RESULTS
-from humm.validate import benchmark, fisher_z, g_test, sample_bnlearn, validate, validate_hcg""",
+from hvme.engine import BinarySCM, LinearSCM
+from hvme.graph import HCG, Evidence, EvidenceKind
+from hvme.paths import RESULTS
+from hvme.validate import benchmark, fisher_z, g_test, sample_bnlearn, validate, validate_hcg""",
 """md:## 1. Conditional independence tests
 
 The basic unit of L2 is the conditional independence test. Discrete data uses the G-test (stratified likelihood ratio) and continuous data uses Fisher-z (partial correlation). In the chain `a → b → c`, a and c are dependent, but conditioning on b makes them independent. A large p-value means "not inconsistent with independence".""",

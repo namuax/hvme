@@ -2,7 +2,7 @@
 
     python examples/03_gym_generate.py
 """
-from humm.gym.dataset import generate
+from hvme.gym.dataset import generate
 
 for d in generate(3, "test", seed=0, langs=("en",)):
     print(f'[{d["query_type"]}, rung {d.get("rung")}]')

@@ -1,11 +1,11 @@
-"""Orchestrator v1: two demos, Rung router escalation, and the Humm-LM verification path (simulated remote generation)."""
+"""Orchestrator v1: two demos, Rung router escalation, and the Hvme-LM verification path (simulated remote generation)."""
 import numpy as np
 import pytest
 
-from humm.graph.text.oracle import TextOracle
-from humm.orchestrator import demo
-from humm.orchestrator.core import Orchestrator, acquire
-from humm.orchestrator.route import QueryRouter, lm_verify, verify_item
+from hvme.graph.text.oracle import TextOracle
+from hvme.orchestrator import demo
+from hvme.orchestrator.core import Orchestrator, acquire
+from hvme.orchestrator.route import QueryRouter, lm_verify, verify_item
 
 
 @pytest.fixture(scope="module")

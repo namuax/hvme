@@ -3,11 +3,11 @@ from collections import Counter
 import numpy as np
 import pytest
 
-from humm.gym.check import audit
-from humm.gym.dataset import _version, generate
-from humm.gym.formats import reward
-from humm.lm.tools import ToolError, format_call, parse_call, respond, run, run_graph
-from humm.lm.trajectories import tool_examples, transcript
+from hvme.gym.check import audit
+from hvme.gym.dataset import _version, generate
+from hvme.gym.formats import reward
+from hvme.lm.tools import ToolError, format_call, parse_call, respond, run, run_graph
+from hvme.lm.trajectories import tool_examples, transcript
 
 CL = {"variables": {"u": ["1", "0"], "x": ["1", "0"], "m": ["1", "0"], "y": ["1", "0"]},
       "graph": ["u -> x", "u -> y", "x -> m", "m -> y"], "unobserved": ["u"],
@@ -95,8 +95,8 @@ def test_v32_named_items_use_first_states():
 
 
 def test_process_score_rewards_reasoning_not_luck(items):
-    from humm.lm.data import STRUCT, process
-    from humm.lm.solutions import solve
+    from hvme.lm.data import STRUCT, process
+    from hvme.lm.solutions import solve
 
     for d in [d for d in items if d["query_type"] in STRUCT][:40]:
         ref = solve(d)
@@ -108,7 +108,7 @@ def test_process_score_rewards_reasoning_not_luck(items):
 
 
 def test_discovery_tool_reads_corr2cause_premises():
-    from humm.lm.tools import run_discovery
+    from hvme.lm.tools import run_discovery
     vs = {"variables": ["A", "B", "C"], "relations": ["A correlates with C.", "B correlates with C.", "A is independent of B."]}
     assert run_discovery(vs | {"hypothesis": "collider", "a": "A", "b": "B"})[0]  # v-structure A → C ← B
     assert run_discovery(vs | {"hypothesis": "direct", "a": "A", "b": "C"})[0]
@@ -128,14 +128,14 @@ def test_discovery_tool_reads_corr2cause_premises():
 
 def test_via_matches_corr2cause_definition():
     import networkx as nx
-    from humm.engine.discovery import holds, mec_of
+    from hvme.engine.discovery import holds, mec_of
     g = nx.DiGraph([("A", "B"), ("B", "C"), ("A", "C")])
     assert holds("via", g, "A", "C") and holds("direct", g, "A", "C")  # true if a path through an intermediate variable exists, even with a direct edge
     assert len(mec_of(g)) == 6 and len(mec_of(nx.DiGraph([("A", "C"), ("B", "C")]))) == 1
 
 
 def test_gym_v33_corr2cause_uses_discovery_tool():
-    from humm.lm.data import process
+    from hvme.lm.data import process
     items = [d for d in generate(400, "train", seed=7, **_version(33)) if d["query_type"] == "corr2cause"]
     assert items and not audit(items)
     assert max(len(d["meta"]["call"]["variables"]) for d in items) >= 5
@@ -158,7 +158,7 @@ def test_tool_choice_repair_switches_to_engine():
 
 
 def test_corr2cause_v33_cot_without_tools():
-    from humm.lm.trajectories import cot_examples
+    from hvme.lm.trajectories import cot_examples
     items = [d for d in generate(400, "train", seed=7, **_version(33)) if d["query_type"] == "corr2cause" and len(d["meta"]["call"]["variables"]) <= 4]
     ex = cot_examples(items)
     assert ex and all(not e["tools"] and reward(d, e["messages"][1]["content"]) == 1 for d, e in zip(items, ex))
@@ -186,8 +186,8 @@ def test_tool_choice_repair_only_named():
 
 def test_causal_graph_tool_matches_labels():
     # structural queries (dsep, backadj, identify) are causal_graph call trajectories, and the tool's verdict matches the Gym answer
-    from humm.lm.tools import run_graph
-    from humm.lm.trajectories import GRAPH, graph_call
+    from hvme.lm.tools import run_graph
+    from hvme.lm.trajectories import GRAPH, graph_call
     items = [d for d in generate(900, "train", seed=6, **_version(31)) if d["query_type"] in GRAPH]
     ex = tool_examples(items, repair=0.3, seed=3)
     assert {e["source"] for e in ex} == {"template", "repair"} and len({d["query_type"] for d in items}) == 3
@@ -200,7 +200,7 @@ def test_causal_graph_tool_matches_labels():
 
 def test_named_flip_keeps_order_cue():
     # a named treatment comes after the baseline in conditional-probability sentences. Half swap the state names; present/absent-type states are not swapped
-    from humm.gym import v3
+    from hvme.gym import v3
     items = generate(200, "train", seed=35, mix={k: 1 for k in v3.NAMED_PHRASES}, generators=_version(35)["generators"])
     flipped = 0
     for d in items:
@@ -229,14 +229,14 @@ def test_state_spelling_and_error_names_states():
 
 def test_named_flip_skips_digit_states():
     # 1/0 states are not swapped (CLadder has no item whose treatment is '0')
-    from humm.gym import v3
+    from hvme.gym import v3
     items = generate(600, "test", seed=35, mix={k: 1 for k in v3.NAMED_PHRASES}, generators=_version(35)["generators"])
     assert all(next(iter(d["meta"]["call"]["treatment"].values())) != "0" for d in items)
 
 
 def test_undeclared_state_repair(items):
     # first call uses an undeclared yes/no treatment state → error naming the declared states → corrected call
-    from humm.lm.trajectories import _repairs, tool_messages
+    from hvme.lm.trajectories import _repairs, tool_messages
     picked = [d for d in items if "undeclared" in _repairs(d["meta"])][:40]
     assert picked
     for d in picked:
@@ -247,7 +247,7 @@ def test_undeclared_state_repair(items):
 
 def test_v29_repairs(items):
     # yes/no on the declaration side, a different outcome name, or the same condition twice gets an error naming the cause and is then fixed. det_cf is worked by hand after a wrong-tool choice
-    from humm.lm.trajectories import _repairs, messages
+    from hvme.lm.trajectories import _repairs, messages
     want = {"declared": "was declared with the states yes / no", "alias": "is in no edge of the graph",
             "duplicate": "under the same condition", "detcf": "needs no tool"}
     for kind, text in want.items():
@@ -293,7 +293,7 @@ def test_engine_names_misspelled_variable():
 def test_typo_repair_names_the_misspelled_variable():
     # nonsense-variable-name typo (in the declaration, a probability sentence or an edge) → the engine points at the name → corrected to the proper name
     import re
-    from humm.lm.trajectories import NUMERIC, typo_examples
+    from hvme.lm.trajectories import NUMERIC, typo_examples
     items = [d for d in generate(600, "train", seed=7, **_version(31)) if d["query_type"] in NUMERIC and "call" in d["meta"]
              and all(re.fullmatch(r"[a-z]{4,5}", v) for v in d["meta"]["call"]["variables"])][:80]
     ex = typo_examples(items, repeat=0.5)
@@ -307,8 +307,8 @@ def test_typo_repair_names_the_misspelled_variable():
 def test_error_prefix_ends_after_engine_error_and_counts_repeats():
     # GRPO round 3: rollout prefix ending in a first call with an injected mistake plus the engine error (with repeat, also the re-call with the same arguments and the second error). Re-calls inside the prefix are not counted
     import re
-    from humm.lm.data import error_repeats
-    from humm.lm.trajectories import NUMERIC, error_prefix, tool_messages
+    from hvme.lm.data import error_repeats
+    from hvme.lm.trajectories import NUMERIC, error_prefix, tool_messages
     d = next(d for d in generate(300, "train", seed=7, **_version(31)) if d["query_type"] in NUMERIC and "call" in d["meta"]
              and all(re.fullmatch(r"[a-z]{4,5}", v) for v in d["meta"]["call"]["variables"]))
     one, two = error_prefix(d, "typo"), error_prefix(d, "typo", repeat=True)
@@ -347,8 +347,8 @@ def test_repeat_after_error_points_to_the_misspelled_argument():
 
 def test_exp_away_items_and_given_condition():
     # comparison restricted to C=c in X → C ← Y. The engine uses correlation + given, and the trajectory puts the common effect in given
-    from humm.gym import v3
-    from humm.lm.trajectories import tool_examples
+    from hvme.gym import v3
+    from hvme.lm.trajectories import tool_examples
     items = generate(60, "train", seed=36, mix={"exp_away": 1}, generators=v3.GENERATORS_36)
     assert len(items) == 60 and audit(items) == [] and {d["meta"]["style"] for d in items} == {"bare", "cl", "gym"}
     ex = tool_examples(items, repair=0.3, seed=36)
@@ -363,7 +363,7 @@ def test_exp_away_items_and_given_condition():
 
 def test_engine_v212_pn_ps_ett_and_mediators():
     # CauGym item answers (PN upper bound 0.4735, PS lower bound 0.6386, ETT 0.0971) and NDE/NIE that are 0 because there is no path (no probabilities, mediator set automatic)
-    from humm.lm.tools import run
+    from hvme.lm.tools import run
     V = lambda *n: {k: ["high", "low"] for k in n}
     pn = {"variables": V("e", "i", "j", "h"), "graph": ["e -> i", "e -> j", "i -> j", "j -> h"], "query": "pn", "bound": "upper",
           "probabilities": ["P(j=low | i=low, e=low) = 0.4412", "P(e=low) = 0.6272", "P(j=low | i=low, e=high) = 0.3416", "P(e=high) = 0.3728",
@@ -389,7 +389,7 @@ def test_engine_v212_pn_ps_ett_and_mediators():
 
 def test_engine_not_state():
     # CLadder: 'gender=not male' is read as whichever of the two states is not male
-    from humm.lm.tools import _assign
+    from hvme.lm.tools import _assign
     s = {"gender": ["male", "female"], "y": ["yes", "no"]}
     assert _assign("gender=not male, y=yes", s) == _assign("gender=female, y=yes", s) == {"gender": 0, "y": 1}
     with pytest.raises(ToolError):
@@ -407,11 +407,11 @@ def test_graph_path_query():
 
 
 def test_ancestry_items():
-    from humm.gym import ancestry
-    from humm.gym.check import audit
-    from humm.gym.dataset import generate
-    from humm.gym.formats import reward
-    from humm.lm.trajectories import tool_examples, transcript
+    from hvme.gym import ancestry
+    from hvme.gym.check import audit
+    from hvme.gym.dataset import generate
+    from hvme.gym.formats import reward
+    from hvme.lm.trajectories import tool_examples, transcript
     items = generate(60, "train", seed=38, mix={f"ancestry_{k}": 1 for k in ancestry.ASKS}, generators=ancestry.GENERATORS_38, langs=("en",))
     assert len(items) == 60 and not audit(items)
     assert all(reward(d, transcript(e["messages"])) == 1 for d, e in zip(items, tool_examples(items)))
@@ -435,11 +435,11 @@ def test_graph_frontdoor_instrument_confounded():
 
 
 def test_graphid_items():
-    from humm.gym import graphid
-    from humm.gym.check import audit
-    from humm.gym.dataset import generate
-    from humm.gym.formats import reward
-    from humm.lm.trajectories import tool_examples, transcript
+    from hvme.gym import graphid
+    from hvme.gym.check import audit
+    from hvme.gym.dataset import generate
+    from hvme.gym.formats import reward
+    from hvme.lm.trajectories import tool_examples, transcript
     items = generate(60, "train", seed=39, mix={f"graphid_{k}": 1 for k in graphid.ASKS}, generators=graphid.GENERATORS_39, langs=("en",))
     assert len(items) == 60 and not audit(items)
     assert all(reward(d, transcript(e["messages"])) == 1 for d, e in zip(items, tool_examples(items)))

@@ -2,15 +2,15 @@ import json
 
 import pytest
 
-from humm import api
-from humm.graph.text import TextOracle
-from humm.orchestrator import acquire
-from humm.orchestrator.demo import marketing
+from hvme import api
+from hvme.graph.text import TextOracle
+from hvme.orchestrator import acquire
+from hvme.orchestrator.demo import marketing
 
 
 @pytest.fixture(scope="module")
 def files(tmp_path_factory):
-    root = tmp_path_factory.mktemp("humm")
+    root = tmp_path_factory.mktemp("hvme")
     s = marketing(n=5000, n_exp=1000)
     f = s.save(root / "demo")
     hcg, _ = acquire(s.data, s.corpus.docs, "marketing", TextOracle(s.corpus), s.column_aliases, "m")
@@ -39,7 +39,7 @@ def test_mcp_tools():
     pytest.importorskip("mcp")
     import asyncio
 
-    from humm.mcp.server import mcp
+    from hvme.mcp.server import mcp
     names = {t.name for t in asyncio.run(mcp.list_tools())}
     assert {"graph_from_table", "graph_from_text", "graph_merge", "validate_run", "engine_identify", "engine_estimate",
             "engine_refute", "engine_counterfactual", "ask"} <= names

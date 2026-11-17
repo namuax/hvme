@@ -1,6 +1,6 @@
 # The causal engine
 
-`humm.engine` is the reference for every number humm reports. It uses graph theory and exact probability calculations only, and it calls no language model. Gym labels, training rewards and validation verdicts all come from it.
+`hvme.engine` is the reference for every number hvme reports. It uses graph theory and exact probability calculations only, and it calls no language model. Gym labels, training rewards and validation verdicts all come from it.
 
 | Module | What it does |
 |---|---|
@@ -31,7 +31,7 @@ Hypotheses for causal discovery: `direct`, `via`, `cause`, `collider`, `confound
 
 ```python
 import networkx as nx
-from humm.engine import BinarySCM, identify
+from hvme.engine import BinarySCM, identify
 
 g = nx.DiGraph([("season", "ad"), ("season", "sales"), ("ad", "traffic"), ("traffic", "sales"), ("ad", "sales")])
 print(identify(g, "ad", "sales").strategy)          # backdoor, adjustment set {season}

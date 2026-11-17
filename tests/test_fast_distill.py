@@ -1,6 +1,6 @@
-from humm.fast.distill import answer_index, distill_items, numbers_kept, paraphrased, storied, story2_prompt, story_prompt, target_from, verified
-from humm.gym import graphid
-from humm.gym.dataset import generate
+from hvme.fast.distill import answer_index, distill_items, numbers_kept, paraphrased, storied, story2_prompt, story_prompt, target_from, verified
+from hvme.gym import graphid
+from hvme.gym.dataset import generate
 
 OK = "Let me compute.\n<tool_call>\n<function=causal_engine>\n</function>\n</tool_call>\n<tool_response>\nATE = 0.12\n</tool_response>\nSo yes.\nFinal answer: yes"
 ERR = OK.replace("ATE = 0.12", "error: unknown variable 'kwox'")

@@ -2,9 +2,9 @@ import networkx as nx
 import pandas as pd
 import pytest
 
-from humm.engine import BinarySCM
-from humm.graph import EdgeStatus, Evidence, EvidenceKind, HCG
-from humm.graph.text import (TEXT_VOCAB, TextOracle, aggregate, canonicalize, chunk, evaluate, link_nodes, make_corpus, merge_hcg, parse_claims,
+from hvme.engine import BinarySCM
+from hvme.graph import EdgeStatus, Evidence, EvidenceKind, HCG
+from hvme.graph.text import (TEXT_VOCAB, TextOracle, aggregate, canonicalize, chunk, evaluate, link_nodes, make_corpus, merge_hcg, parse_claims,
                              text_to_hcg)
 
 
@@ -59,7 +59,7 @@ def test_pipeline_perfect_oracle_recovers_graph(corpus):
 
 
 def test_clean_strips_change_words():
-    from humm.graph.text.extract import clean
+    from hvme.graph.text.extract import clean
     assert [clean(x) for x in ["Higher visitor count", "성수기 수요 증가", "'매출'", "lower"]] == ["visitor count", "성수기 수요", "매출", "lower"]
 
 

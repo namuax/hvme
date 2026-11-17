@@ -1,6 +1,6 @@
 # LM tools
 
-The LM never computes a causal quantity itself. It reads the passage, writes the variables, graph and probabilities as tool arguments, and answers from the tool's result. Tool definitions are in `humm.lm.tools.TOOLS` (OpenAI function format) and the loop that runs them is `humm.lm.sample.generate_tools`.
+The LM never computes a causal quantity itself. It reads the passage, writes the variables, graph and probabilities as tool arguments, and answers from the tool's result. Tool definitions are in `hvme.lm.tools.TOOLS` (OpenAI function format) and the loop that runs them is `hvme.lm.sample.generate_tools`.
 
 | Tool | Use | Main arguments |
 |---|---|---|

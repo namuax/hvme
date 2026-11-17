@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 import pytest
 
-from humm.engine import (BinarySCM, LinearSCM, adjustment_sets, d_separated, estimate, frontdoor_sets, identify, instruments,
+from hvme.engine import (BinarySCM, LinearSCM, adjustment_sets, d_separated, estimate, frontdoor_sets, identify, instruments,
                          is_frontdoor, is_valid_adjustment, local_markov, optimal_adjustment, refute)
 
 SMOKING = nx.DiGraph([("U", "S"), ("U", "C"), ("S", "T"), ("T", "C")])  # smoking-tar-cancer, U unobserved

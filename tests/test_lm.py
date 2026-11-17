@@ -4,10 +4,10 @@ import sys
 
 import pytest
 
-from humm.gym.dataset import generate
-from humm.gym.formats import reward
-from humm.lm.data import looping, pick, template_examples
-from humm.lm.solutions import solve
+from hvme.gym.dataset import generate
+from hvme.gym.formats import reward
+from hvme.lm.data import looping, pick, template_examples
+from hvme.lm.solutions import solve
 
 
 def test_solutions_correct_all_types():
@@ -18,7 +18,7 @@ def test_solutions_correct_all_types():
 
 def test_generation_reproducible_across_processes():
     """The same items come out even with a different string-hash seed (i.e. across processes)."""
-    code = "import hashlib,json;from humm.gym.dataset import generate;print(hashlib.sha1(json.dumps(generate(120,'train',seed=1),ensure_ascii=False).encode()).hexdigest())"
+    code = "import hashlib,json;from hvme.gym.dataset import generate;print(hashlib.sha1(json.dumps(generate(120,'train',seed=1),ensure_ascii=False).encode()).hexdigest())"
     out = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=os.environ | {"PYTHONHASHSEED": s}).stdout for s in ("1", "2")}
     assert len(out) == 1
 

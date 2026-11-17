@@ -3,11 +3,11 @@ import json
 import numpy as np
 import pytest
 
-from humm.gym import GENERATORS, generate, option_labels, parse_final, render, reward, target_index, target_text
-from humm.gym.check import audit
-from humm.gym.graphs import all_dags, mec_index
-from humm.gym.verbalize import josa
-from humm.gym.vocab import DOMAINS, TRAIN_DOMAINS
+from hvme.gym import GENERATORS, generate, option_labels, parse_final, render, reward, target_index, target_text
+from hvme.gym.check import audit
+from hvme.gym.graphs import all_dags, mec_index
+from hvme.gym.verbalize import josa
+from hvme.gym.vocab import DOMAINS, TRAIN_DOMAINS
 
 
 @pytest.fixture(scope="module")

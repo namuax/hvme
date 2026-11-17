@@ -25,10 +25,10 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import pandas as pd
 
-from humm.bench.metrics import graph_report
-from humm.graph.tabular import NETWORKS, NoisyOracle, compare, describe_variables, pc, profile, tabular_to_hcg, to_dag
-from humm.paths import RESULTS
-from humm.validate import sample_bnlearn
+from hvme.bench.metrics import graph_report
+from hvme.graph.tabular import NETWORKS, NoisyOracle, compare, describe_variables, pc, profile, tabular_to_hcg, to_dag
+from hvme.paths import RESULTS
+from hvme.validate import sample_bnlearn
 
 NAMES = ["asia", "sachs", "insurance", "alarm"]
 data = {n: sample_bnlearn(n, 5000, seed=0) for n in NAMES}""",
@@ -96,8 +96,8 @@ We measure both strategies with two models. First, how well the prior matches th
 
 import torch
 
-from humm.providers.cache import CachedProvider
-from humm.providers.hf import HFProvider
+from hvme.providers.cache import CachedProvider
+from hvme.providers.hf import HFProvider
 
 MODELS = {
     "Qwen/Qwen3.5-4B": "cuda:0",
@@ -143,8 +143,8 @@ r.changes.assign(true_edge=[tuple(e.split("→")) in true.edges for e in r.chang
 Replay the LLM responses recorded in section 4 (`results/llm_cache/`) to experiment without a GPU. First check whether the LLM's confidence matches its actual accuracy (calibration), then compare, per network, whether the data's direction or the LLM's direction is right more often.""",
 """import numpy as np
 
-from humm.graph.tabular import DEV, HELDOUT, llm_pairwise
-from humm.providers.cache import ReplayProvider
+from hvme.graph.tabular import DEV, HELDOUT, llm_pairwise
+from hvme.providers.cache import ReplayProvider
 
 replay = {m: ReplayProvider(RESULTS / "llm_cache" / f"Qwen3.5-{m}.json", name=m) for m in ("4B", "9B")}
 rows = []

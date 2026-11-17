@@ -1,10 +1,10 @@
-# Using humm from an MCP client
+# Using hvme from an MCP client
 
 Install the MCP extra and register the server with your client. With Claude Code:
 
 ```bash
-pip install "humm[mcp]"
-claude mcp add humm -e HUMM_HOME=$PWD/humm_work -- humm-mcp
+pip install "hvme[mcp]"
+claude mcp add hvme -e HVME_HOME=$PWD/hvme_work -- hvme-mcp
 ```
 
 Any client that reads a JSON server list works the same way:
@@ -12,15 +12,15 @@ Any client that reads a JSON server list works the same way:
 ```json
 {
   "mcpServers": {
-    "humm": {
-      "command": "humm-mcp",
-      "env": {"HUMM_HOME": "/path/to/humm_work", "HUMM_LLM": "hf:Qwen/Qwen3.5-9B@cuda:0"}
+    "hvme": {
+      "command": "hvme-mcp",
+      "env": {"HVME_HOME": "/path/to/hvme_work", "HVME_LLM": "hf:Qwen/Qwen3.5-9B@cuda:0"}
     }
   }
 }
 ```
 
-`HUMM_LLM` is only needed for tools that read documents or analyse free-form questions with an LLM. The graph, validation and engine tools run without it.
+`HVME_LLM` is only needed for tools that read documents or analyse free-form questions with an LLM. The graph, validation and engine tools run without it.
 
 Typical order of tool calls (the skills in `skills/` describe it in detail):
 

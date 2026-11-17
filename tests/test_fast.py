@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from humm.fast import fit_temperature, metrics, routing_curve, top_ece, verify_items, pairwise_items
-from humm.fast.calibrate import apply_temperature
+from hvme.fast import fit_temperature, metrics, routing_curve, top_ece, verify_items, pairwise_items
+from hvme.fast.calibrate import apply_temperature
 
 
 def test_temperature_fixes_overconfidence():

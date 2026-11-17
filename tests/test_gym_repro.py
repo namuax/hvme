@@ -7,7 +7,7 @@ from pathlib import Path
 SCRIPT = """
 import hashlib
 import numpy as np
-from humm.gym import graphid, prob, v3
+from hvme.gym import graphid, prob, v3
 gens = v3.GENERATORS_34 | v3.GENERATORS_35 | prob.GENERATORS_37 | graphid.GENERATORS_39
 h = hashlib.md5()
 for k in sorted(gens):

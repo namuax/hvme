@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 
-from humm.bench import prompts, runner
+from hvme.bench import prompts, runner
 
 
 class FakeProvider:
@@ -32,14 +32,14 @@ def test_noul_and_cot_summary():
 
 
 def test_caugym_and_calm_scoring():
-    from humm.bench.datasets import BENCH
-    from humm.bench.general import caugym_correct
+    from hvme.bench.datasets import BENCH
+    from hvme.bench.general import caugym_correct
 
     assert caugym_correct('풀이 {"ANSWER": "Yes", "PROB": "0.1234"}', '{"PROB": "0.12343"}') and not caugym_correct('{"PROB": "0.1250"}', '{"PROB": "0.1234"}')
     assert caugym_correct("LACK_CONDITION", "LACK_CONDITION")
     if not (BENCH / "calm_repo").exists():
         pytest.skip("CaLM repository not found (data/bench/calm_repo)")
-    from humm.bench import calm as C
+    from hvme.bench import calm as C
 
     assert len(C.TASKS) == 45
     q = C.questions("ATE-P_ATE-basic_EN", n=2)

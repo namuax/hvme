@@ -3,10 +3,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from humm.bench.metrics import graph_report
-from humm.engine import BinarySCM
-from humm.graph import EdgeStatus
-from humm.graph.tabular import Knowledge, NoisyOracle, knowledge_from, llm_pairwise, pairwise_agreement, parse_tiers, pc, profile, tabular_to_hcg, to_dag
+from hvme.bench.metrics import graph_report
+from hvme.engine import BinarySCM
+from hvme.graph import EdgeStatus
+from hvme.graph.tabular import Knowledge, NoisyOracle, knowledge_from, llm_pairwise, pairwise_agreement, parse_tiers, pc, profile, tabular_to_hcg, to_dag
 
 COLLIDER = nx.DiGraph([("X", "Z"), ("Y", "Z"), ("Z", "W")])
 
@@ -96,7 +96,7 @@ def test_pairwise_knowledge_and_agreement():
 
 
 def test_hybrid_uses_only_confident_consensus(collider_data):
-    from humm.graph.tabular import strong_knowledge
+    from hvme.graph.tabular import strong_knowledge
     a = pd.DataFrame([{"a": "X", "b": "Z", "p_ab": 0.99}, {"a": "W", "b": "Z", "p_ab": 0.97}])
     b = pd.DataFrame([{"a": "X", "b": "Z", "p_ab": 0.96}, {"a": "W", "b": "Z", "p_ab": 0.40}])
     assert strong_knowledge([a, b], 0.95).forbidden == {("Z", "X")}  # only pairs both models are confident about

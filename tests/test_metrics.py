@@ -1,7 +1,7 @@
 import networkx as nx
 import pytest
 
-from humm.bench.metrics import brier, ece, edge_f1, is_valid_adjustment, shd, sid
+from hvme.bench.metrics import brier, ece, edge_f1, is_valid_adjustment, shd, sid
 
 CHAIN = nx.DiGraph([("a", "b"), ("b", "c")])
 

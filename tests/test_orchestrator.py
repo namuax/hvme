@@ -1,11 +1,11 @@
 import networkx as nx
 import pytest
 
-from humm.engine import BinarySCM
-from humm.graph.schema import HCG
-from humm.graph.text import TextOracle
-from humm.orchestrator import Orchestrator, parse_rules
-from humm.orchestrator.demo import QUESTIONS, marketing
+from hvme.engine import BinarySCM
+from hvme.graph.schema import HCG
+from hvme.graph.text import TextOracle
+from hvme.orchestrator import Orchestrator, parse_rules
+from hvme.orchestrator.demo import QUESTIONS, marketing
 
 
 @pytest.fixture(scope="module")
@@ -67,7 +67,7 @@ def test_parse_keeps_rule_variables():
         name = "flip"
         def complete(self, prompts, max_new_tokens=256):
             return ['{"kind": "ate", "treatment": "sales", "outcome": "ad_spend", "mediators": []}']
-    from humm.orchestrator import parse
+    from hvme.orchestrator import parse
     hcg = HCG(graph_id="t")
     hcg.add_node("ad_spend", aliases=["광고비"])
     hcg.add_node("sales", aliases=["매출"])
@@ -77,7 +77,7 @@ def test_parse_keeps_rule_variables():
 
 
 def test_check_narrative(orch):
-    from humm.orchestrator.explain import check_narrative
+    from hvme.orchestrator.explain import check_narrative
     a = orch.ask(QUESTIONS[0]).analysis
     v = a.estimate["ate"]["value"]
     assert check_narrative(f"광고비를 늘리면 매출이 오른다. 효과는 {v:.3f}이다.", a) == []
@@ -87,7 +87,7 @@ def test_check_narrative(orch):
 
 
 def test_to_plain():
-    from humm.orchestrator.explain import to_plain
+    from hvme.orchestrator.explain import to_plain
     cases = {"매출이 증가합니다.": "매출이 증가한다.", "같지 않습니다.": "같지 않다.", "변하지 않습니다.": "변하지 않는다.", "결과입니다.": "결과이다.",
              "볼 수 있습니다.": "볼 수 있다.", "다릅니다.": "다르다.", "확인됩니다.": "확인된다.", "유의하게 나타났습니다.": "유의하게 나타났다.",
              "이미 '~다'체이다.": "이미 '~다'체이다."}

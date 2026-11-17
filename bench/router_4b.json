@@ -1,5 +1,5 @@
 {
- "model": "humm Router 4B (Rung classifier, seed 0)",
+ "model": "hvme Router 4B (Rung classifier, seed 0)",
  "sets": {
   "rung_cladder600": {
    "n": 600,

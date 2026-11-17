@@ -16,14 +16,14 @@ This notebook connects the graph construction, validation and causal engine buil
 | Graph sensitivity (L5) | Delete or flip each edge, restore falsified edges, add a hidden confounder → does the conclusion change? | `orchestrator.sensitivity` |
 | Explanation | Answer, evidence paths (edge status, evidence, quotes) and list of assumptions. The LLM only writes the summary paragraph | `orchestrator.explain` |
 
-The same functionality is exposed as `humm.api` (path-based functions) and `humm.mcp` (MCP server). Sections 1-3, 5 and 6 run on CPU; section 4 needs a GPU.""",
+The same functionality is exposed as `hvme.api` (path-based functions) and `hvme.mcp` (MCP server). Sections 1-3, 5 and 6 run on CPU; section 4 needs a GPU.""",
 """import pandas as pd
 from IPython.display import Markdown, display
 
-from humm.graph.text import TextOracle
-from humm.orchestrator import Orchestrator
-from humm.orchestrator.demo import QUESTIONS, marketing, scorecard
-from humm.paths import DATA, GRAPHS, RESULTS
+from hvme.graph.text import TextOracle
+from hvme.orchestrator import Orchestrator
+from hvme.orchestrator.demo import QUESTIONS, marketing, scorecard
+from hvme.paths import DATA, GRAPHS, RESULTS
 
 pd.set_option("display.max_colwidth", 60)
 s = marketing()
@@ -67,8 +67,8 @@ import json
 
 import torch
 
-from humm.providers.cache import CachedProvider
-from humm.providers.hf import HFProvider
+from hvme.providers.cache import CachedProvider
+from hvme.providers.hf import HFProvider
 
 MODELS = {
     "Qwen/Qwen3.5-4B": "cuda:0",
@@ -103,7 +103,7 @@ e2e.groupby("model").agg(parsed_ok=("parsed_ok", "mean"), narrative_ok=("narrati
 """md:## 5. (CPU) Replaying recorded responses
 
 Replay the 9B responses recorded on the GPU and check that the result matches section 4. Before the GPU run there is no recording, so this raises a `KeyError`.""",
-"""replay:from humm.providers.cache import ReplayProvider
+"""replay:from hvme.providers.cache import ReplayProvider
 
 rp = ReplayProvider(RESULTS / "llm_cache" / "Qwen3.5-9B.json", name="Qwen3.5-9B")
 o = Orchestrator.from_sources(s.data, s.corpus.docs, "marketing", rp, s.column_aliases, "marketing-demo-Qwen3.5-9B", llm=rp,
@@ -115,23 +115,23 @@ print("Summary check passed - GPU recording:", int(gpu.narrative_ok.sum()), "/ r
 replayed""",
 """md:## 6. MCP server
 
-`humm.mcp` exposes the `humm.api` functions as MCP tools. Register it in Claude Desktop or Claude Code as below, and an agent can call the tools to build graphs and answer questions (`pip install -e ".[mcp]"`).
+`hvme.mcp` exposes the `hvme.api` functions as MCP tools. Register it in Claude Desktop or Claude Code as below, and an agent can call the tools to build graphs and answer questions (`pip install -e ".[mcp]"`).
 
 ```json
-{"mcpServers": {"humm": {"command": "python", "args": ["-m", "humm.mcp"], "cwd": "<path to the humm repository>",
-                         "env": {"HUMM_LLM": "hf:Qwen/Qwen3.5-9B@cuda:1"}}}}
+{"mcpServers": {"hvme": {"command": "python", "args": ["-m", "hvme.mcp"], "cwd": "<path to the hvme repository>",
+                         "env": {"HVME_LLM": "hf:Qwen/Qwen3.5-9B@cuda:1"}}}}
 ```
 
 | MCP tool | Module | Purpose |
 |---|---|---|
-| `graph_from_table`, `graph_from_text`, `graph_merge`, `graph_get`, `graph_list` | `humm.graph.*` | Build, merge and retrieve graphs |
-| `validate_run` | `humm.validate.run` | L1/L2 validation, edge status update |
-| `engine_identify`, `engine_estimate`, `engine_refute`, `engine_counterfactual` | `humm.engine.*` | Identification, estimation, refutation, counterfactuals |
+| `graph_from_table`, `graph_from_text`, `graph_merge`, `graph_get`, `graph_list` | `hvme.graph.*` | Build, merge and retrieve graphs |
+| `validate_run` | `hvme.validate.run` | L1/L2 validation, edge status update |
+| `engine_identify`, `engine_estimate`, `engine_refute`, `engine_counterfactual` | `hvme.engine.*` | Identification, estimation, refutation, counterfactuals |
 | `ask` | (orchestrator) | Handle one question end to end |
 
 Below is an example of calling the same functions directly from the notebook (no LLM, using the graph from section 2).""",
-"""from humm import api
-from humm.mcp.server import mcp
+"""from hvme import api
+from hvme.mcp.server import mcp
 
 orch.hcg.save(GRAPHS / "marketing-demo.hcg.json")
 print("MCP tools:", [t.name for t in await mcp.list_tools()])

@@ -1,7 +1,7 @@
 import networkx as nx
 import pytest
 
-from humm.graph import HCG, EdgeStatus, Evidence, EvidenceKind, to_compact_json, to_edge_text
+from hvme.graph import HCG, EdgeStatus, Evidence, EvidenceKind, to_compact_json, to_edge_text
 
 
 def sales_graph():

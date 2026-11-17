@@ -4,7 +4,7 @@ import nbformat as nbf
 cells = [
 """md:# 03. Symbolic Causal Engine — Identification, Estimation, Refutation, Counterfactuals
 
-`humm.engine` is the **ground-truth reference** for all of Humm. The answers to Humm-Gym problems, the rewards for Humm-LM reinforcement learning, and the verdicts of DAG validation all rely on its computations. For that reason it runs on graph theory and probability calculations alone, with no LLM involved.
+`hvme.engine` is the **ground-truth reference** for all of Hvme. The answers to Hvme-Gym problems, the rewards for Hvme-LM reinforcement learning, and the verdicts of DAG validation all rely on its computations. For that reason it runs on graph theory and probability calculations alone, with no LLM involved.
 
 | Module | What it does |
 |---|---|
@@ -21,7 +21,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from humm.engine import (BinarySCM, LinearSCM, adjustment_sets, d_separated, estimate, identify, is_valid_adjustment,
+from hvme.engine import (BinarySCM, LinearSCM, adjustment_sets, d_separated, estimate, identify, is_valid_adjustment,
                          optimal_adjustment, refute)
 
 logging.disable(logging.WARNING)""",

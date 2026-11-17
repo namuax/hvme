@@ -2,9 +2,9 @@ import networkx as nx
 import numpy as np
 import pytest
 
-from humm.engine import BinarySCM, LinearSCM
-from humm.graph import HCG, EdgeStatus, Evidence, EvidenceKind
-from humm.validate import CITester, benchmark, check_structure, fisher_z, g_test, validate, validate_hcg
+from hvme.engine import BinarySCM, LinearSCM
+from hvme.graph import HCG, EdgeStatus, Evidence, EvidenceKind
+from hvme.validate import CITester, benchmark, check_structure, fisher_z, g_test, validate, validate_hcg
 
 CHAIN = nx.DiGraph([("a", "b"), ("b", "c")])
 
@@ -66,7 +66,7 @@ def test_apply_to_hcg_status_rules(binary_data):
 
 
 def test_l6_benchmark_with_oracle():
-    from humm.validate import sample_bnlearn
+    from hvme.validate import sample_bnlearn
     pytest.importorskip("pgmpy")
     true = sample_bnlearn("asia", 200)[0]
     r = benchmark(lambda df: true.copy(), names=("asia",), n=200)

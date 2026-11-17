@@ -1,5 +1,5 @@
 {
- "model": "humm Fast 4B (single pass, temperature-calibrated)",
+ "model": "hvme Fast 4B (single pass, temperature-calibrated)",
  "sets": {
   "cladder600": {
    "n": 600,

@@ -1,7 +1,7 @@
 """Quickstart that runs without a GPU or LLM: build a causal graph from synthetic marketing data and documents, then validate, identify, estimate, run counterfactuals and ask a question.
 
-    pip install humm
-    HUMM_HOME=./humm_work python examples/01_quickstart.py
+    pip install hvme
+    HVME_HOME=./hvme_work python examples/01_quickstart.py
 
 Instead of an LLM that extracts edges from text, a fake LLM that knows the ground-truth corpus (TextOracle) is used. For a real LLM, pass e.g. llm="hf:Qwen/Qwen3.5-9B".
 """
@@ -9,13 +9,13 @@ import json
 import os
 from pathlib import Path
 
-os.environ.setdefault("HUMM_HOME", "humm_work")
-from humm import api  # noqa: E402
-from humm.graph.text import TextOracle  # noqa: E402
-from humm.orchestrator import acquire  # noqa: E402
-from humm.orchestrator.demo import marketing  # noqa: E402
+os.environ.setdefault("HVME_HOME", "hvme_work")
+from hvme import api  # noqa: E402
+from hvme.graph.text import TextOracle  # noqa: E402
+from hvme.orchestrator import acquire  # noqa: E402
+from hvme.orchestrator.demo import marketing  # noqa: E402
 
-work = Path(os.environ["HUMM_HOME"])
+work = Path(os.environ["HVME_HOME"])
 s = marketing(n=5000, n_exp=1000)  # 5,000 observational rows, 1,000 experimental rows, 12 documents (generated from the true DAG)
 files = s.save(work / "demo")
 

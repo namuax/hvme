@@ -2,9 +2,9 @@ import sys
 import nbformat as nbf
 
 cells = [
-"""md:# 04. Humm-Gym — A Generator of Verifiable Causal Reasoning Problems
+"""md:# 04. Hvme-Gym — A Generator of Verifiable Causal Reasoning Problems
 
-Humm-Gym produces training and evaluation data for Humm-LM and Humm-Fast. Each problem gets a random causal graph and SCM, and the answer is computed by `humm.engine` (notebook 03). Because answers can be checked symbolically, they can be used directly for SFT data selection (rejection sampling) and as GRPO rewards.
+Hvme-Gym produces training and evaluation data for Hvme-LM and Hvme-Fast. Each problem gets a random causal graph and SCM, and the answer is computed by `hvme.engine` (notebook 03). Because answers can be checked symbolically, they can be used directly for SFT data selection (rejection sampling) and as GRPO rewards.
 
 | Query type | Rung | Format | Content |
 |---|---|---|---|
@@ -23,13 +23,13 @@ The design principles are as follows.
 - **Item mix**: nie, nde, ate and counterfactual items, which were weak at baseline, are over-represented.""",
 """import pandas as pd
 
-from humm.gym import GENERATORS, audit, build, generate, render, summary, target_text
-from humm.paths import GYM
+from hvme.gym import GENERATORS, audit, build, generate, render, summary, target_text
+from hvme.paths import GYM
 
 pd.set_option("display.max_colwidth", 120)""",
 """md:## 1. Example items
 
-We look at one query type each in Korean and English. `render(item, "direct")` produces the format that expects a single answer token (Humm-Fast), and `render(item, "cot")` produces the format that asks for a step-by-step solution (Humm-LM).""",
+We look at one query type each in Korean and English. `render(item, "direct")` produces the format that expects a single answer token (Hvme-Fast), and `render(item, "cot")` produces the format that asks for a step-by-step solution (Hvme-LM).""",
 """sample = generate(240, "train", seed=42)
 ko_nie = next(d for d in sample if d["query_type"] == "nie" and d["lang"] == "ko")
 print(render(ko_nie, "cot"))
@@ -52,21 +52,21 @@ summary(sample).round(2)""",
 """SIZES = {"train": 100_000, "dev": 2_000, "test": 5_000}
 stats = build(SIZES, seed=0)
 stats.pivot_table(index="query_type", columns="split", values="n", aggfunc="sum")""",
-"""from humm.gym import read_jsonl
+"""from hvme.gym import read_jsonl
 
 test = read_jsonl(GYM / "test.jsonl")
 print("Mismatches on test re-verification:", len(audit(test)))
 pd.DataFrame(test).groupby(["domain", "lang"]).size().unstack()""",
-"""md:## 4. (GPU) Qwen3.5 baseline — Humm-Gym test
+"""md:## 4. (GPU) Qwen3.5 baseline — Hvme-Gym test
 
-Before training, we measure how the two models score on Humm-Gym. The direct mode uses the whole test set; cot is slow, so it uses only 600 items balanced across query types. These scores are the starting point for training Humm-Fast and Humm-LM.""",
+Before training, we measure how the two models score on Hvme-Gym. The direct mode uses the whole test set; cot is slow, so it uses only 600 items balanced across query types. These scores are the starting point for training Hvme-Fast and Hvme-LM.""",
 """import gc
 
 import torch
 
-from humm.bench import runner as R
-from humm.gym import eval_cot, eval_direct, eval_summary
-from humm.providers.hf import HFProvider
+from hvme.bench import runner as R
+from hvme.gym import eval_cot, eval_direct, eval_summary
+from hvme.providers.hf import HFProvider
 
 MODELS = {
     "Qwen/Qwen3.5-4B": "cuda:0",

@@ -19,11 +19,11 @@ Performance can only be measured against a ground-truth graph, so we evaluate on
 """import networkx as nx
 import pandas as pd
 
-from humm.engine import BinarySCM
-from humm.graph.tabular import tabular_to_hcg
-from humm.graph.text import TEXT_VOCAB, TextOracle, evaluate, link_nodes, make_corpus, merge_hcg, text_to_hcg
-from humm.paths import RESULTS
-from humm.validate import validate_hcg
+from hvme.engine import BinarySCM
+from hvme.graph.tabular import tabular_to_hcg
+from hvme.graph.text import TEXT_VOCAB, TextOracle, evaluate, link_nodes, make_corpus, merge_hcg, text_to_hcg
+from hvme.paths import RESULTS
+from hvme.validate import validate_hcg
 
 pd.set_option("display.max_colwidth", 80)
 DOMAINS, LANGS = ["marketing", "manufacturing", "it_ops"], ["ko", "en"]
@@ -69,8 +69,8 @@ Process the six corpora with two models and compare with the ground-truth graph.
 
 import torch
 
-from humm.providers.cache import CachedProvider
-from humm.providers.hf import HFProvider
+from hvme.providers.cache import CachedProvider
+from hvme.providers.hf import HFProvider
 
 MODELS = {
     "Qwen/Qwen3.5-4B": "cuda:0",
@@ -96,7 +96,7 @@ llm_res.groupby(["model", "setting"])[["claims", "precision", "recall", "f1", "r
 """md:## 5. (CPU) Merging text and data (replay)
 
 Generate tabular data from the marketing corpus's ground-truth DAG (PC only, no LLM) and merge it with the text HCG built by the 9B model. Nodes of the two graphs are linked through an alias dictionary. When opposite-direction edges coexist, the one with stronger **orientation evidence** (text, LLM, expert, and PC's v-structures and Meek rules) is kept. A direction PC chose arbitrarily does not count as orientation evidence.""",
-"""from humm.providers.cache import ReplayProvider
+"""from hvme.providers.cache import ReplayProvider
 
 c = corpora[("marketing", "ko")]
 df = BinarySCM.random(c.graph, seed=5).sample(8000, seed=1)[sorted(c.graph.nodes)]

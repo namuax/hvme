@@ -1,4 +1,4 @@
-"""Check the Humm-Fast training loop with a small random model (only when torch and transformers are available)."""
+"""Check the Hvme-Fast training loop with a small random model (only when torch and transformers are available)."""
 import numpy as np
 import pytest
 
@@ -6,9 +6,9 @@ torch = pytest.importorskip("torch")
 transformers = pytest.importorskip("transformers")
 tokenizers = pytest.importorskip("tokenizers")
 
-from humm.fast.judge import FastJudge  # noqa: E402
-from humm.fast.router import Routed  # noqa: E402
-from humm.fast.train import calibrate, evaluate, predict, train  # noqa: E402
+from hvme.fast.judge import FastJudge  # noqa: E402
+from hvme.fast.router import Routed  # noqa: E402
+from hvme.fast.train import calibrate, evaluate, predict, train  # noqa: E402
 
 WORDS = ["red", "blue", "green", "cause", "effect", "Yes", "No", "예", "아니오", "A", "B", "C", "D", "E", "1", "2", "3", "4", "5", "is", "the", "item", "color"]
 
@@ -71,7 +71,7 @@ def test_save_load(tmp_path, monkeypatch):
 
 
 def test_lora_train_and_merge():
-    from humm.fast.lora import LoRALinear, add_lora, merge_lora
+    from hvme.fast.lora import LoRALinear, add_lora, merge_lora
     judge = tiny_judge()
     n_all = sum(p.numel() for p in judge.model.parameters())
     n_train = add_lora(judge.model, r=4, alpha=8)
@@ -87,7 +87,7 @@ def test_lora_train_and_merge():
 
 
 def test_knowledge_temperature():
-    from humm.fast.judge import temp_key
+    from hvme.fast.judge import temp_key
     assert temp_key("You are an expert in x.\nWhich?", ["A", "B"]) == "knowledge:choice" and temp_key("q", ["A", "B"]) == "choice"
     judge = tiny_judge()
     judge.temperature = {"noul": 1.0, "knowledge:noul": 50.0}
@@ -96,8 +96,8 @@ def test_knowledge_temperature():
 
 
 def test_sft_masks_prompt_and_learns():
-    from humm.fast.lora import add_lora
-    from humm.lm.sft import encode, train_sft
+    from hvme.fast.lora import add_lora
+    from hvme.lm.sft import encode, train_sft
     judge = tiny_judge()
     tok, model = judge.tok, judge.model
     ex = [{"prompt": "the item color is red", "response": "Yes"} if i % 2 else {"prompt": "the item color is blue", "response": "No"} for i in range(64)]
@@ -114,8 +114,8 @@ def test_sft_masks_prompt_and_learns():
 
 
 def test_sft_checkpoint_resume_matches_uninterrupted(tmp_path):
-    from humm.fast.lora import add_lora
-    from humm.lm.sft import train_sft
+    from hvme.fast.lora import add_lora
+    from hvme.lm.sft import train_sft
     ex = [{"prompt": f"the item color is {c}", "response": a} for c, a in [("red", "Yes"), ("blue", "No")] * 12]
     kw = dict(epochs=1, lr=1e-2, batch_size=2, grad_accum=2, max_len=64, log_every=1, log=lambda r: None)
 
