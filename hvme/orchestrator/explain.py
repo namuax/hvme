@@ -6,7 +6,7 @@ from ..gym.verbalize import josa
 from .analysis import Analysis
 
 KIND_KO = {"ate": "개입 효과(ATE)", "association": "상관 대 인과", "mediation": "매개(직접·간접) 효과", "ett": "처치군 반사실 효과(ETT)"}
-RUNG = {"ate": 2, "association": 1, "mediation": 3, "ett": 3}
+RUNG = {"ate": 2, "association": 2, "mediation": 3, "ett": 3}  # correlation-vs-causation questions are Rung 2 (same rule as CLadder backadj)
 STRATEGY_KO = {"backdoor": "백도어 조정", "frontdoor": "프론트도어", "iv": "도구 변수", "no_effect": "인과 경로 없음", "not_identified": "식별 불가"}
 
 NARRATE_PROMPT = """아래 인과 분석 결과만 사용해서 질문에 대한 답을 한국어 3문장 안팎으로 쉽게 풀어 쓴다.
