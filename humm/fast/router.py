@@ -1,4 +1,4 @@
-"""라우터: Hume-Fast가 먼저 답하고, 확신이 낮은 문항만 느린 공급자(범용 LLM)로 올린다 (04_hume_fast.md 5장).
+"""라우터: Humm-Fast가 먼저 답하고, 확신이 낮은 문항만 느린 공급자(범용 LLM)로 올린다 (04_humm_fast.md 5장).
 
 공급자 인터페이스를 따르므로 tabular_to_hcg·text_to_hcg에 provider로 넘기면 된다. 생성(complete)은 느린 공급자가 맡는다.
 확신도는 최대 보기 확률이다. threshold보다 낮으면 올린다. 호출 수는 n_fast·n_slow에 쌓인다.

@@ -1,4 +1,4 @@
-"""Hume Causal Graph(HCG) 스키마. preliminary/02_proposal.md 4.1, 03_dag_validation.md 7장 규칙을 따른다."""
+"""Humm Causal Graph(HCG) 스키마. preliminary/02_proposal.md 4.1, 03_dag_validation.md 7장 규칙을 따른다."""
 from datetime import date
 from enum import Enum
 from pathlib import Path

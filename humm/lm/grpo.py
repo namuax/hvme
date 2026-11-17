@@ -1,4 +1,4 @@
-"""Hume-LM GRPO (Step 9-4): SFT v2.1에서 시작해 검증 가능 보상(엔진 정답)으로 도구 사용 풀이를 다듬는다.
+"""Humm-LM GRPO (Step 9-4): SFT v2.1에서 시작해 검증 가능 보상(엔진 정답)으로 도구 사용 풀이를 다듬는다.
 
 - 문항마다 G개 rollout(도구 실행 포함, humm.lm.sample.generate_tools) → 보상 → 묶음 안에서 표준화한 이점(advantage)
 - 보상: 정답 1, 'Final answer' 없음 −0.2, 반복 루프 −0.1, 4,000자 넘는 길이 최대 −0.1. 도구 오류 뒤 고친 재호출은 깎지 않는다

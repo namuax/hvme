@@ -1,6 +1,6 @@
-"""Hume-Gym v3 생성기 (Step 9 SFT v2): 문형 다양화·처치/결과 전환·CLadder식 확률 문맥·결정론적 반사실.
+"""Humm-Gym v3 생성기 (Step 9 SFT v2): 문형 다양화·처치/결과 전환·CLadder식 확률 문맥·결정론적 반사실.
 
-SFT 1차는 유형마다 문형이 하나뿐이라 모델이 문형으로 질의 유형을 외웠다(reports/2026-10-28_hume_lm_sft.md 3장). v3는
+SFT 1차는 유형마다 문형이 하나뿐이라 모델이 문형으로 질의 유형을 외웠다(reports/2026-10-28_humm_lm_sft.md 3장). v3는
 - 질의 유형마다 한국어·영어 문형을 여러 개 두고, 처치 상태(t)와 결과 상태(o)를 무작위로 뒤집는다.
 - 수치 질의 문맥의 절반은 전체 확률표 대신 질의에 필요한 관측 확률(주변·결합·조건부)만 준다. 이때 정답 계산에 쓸
   causal_engine 호출 인자(meta.call)를 문맥과 같은 숫자로 만들고, 도구 값이 참값과 맞는 경우에만 이 문맥을 쓴다.
@@ -8,25 +8,25 @@ SFT 1차는 유형마다 문형이 하나뿐이라 모델이 문형으로 질의
 
 수치 질의의 값은 모두 '처치 세계 − 기준 세계'(humm.lm.tools.evaluate)이고, meta.q에 엔진 질의를 비트로 남겨 check가 재계산한다.
 
-v3.1(SFT v2.1, GENERATORS_31): SFT v2는 CLadder 문장을 도구 인자로 옮기지 못했다(reports/2026-10-28_hume_lm_sft_v2.md 3.2).
+v3.1(SFT v2.1, GENERATORS_31): SFT v2는 CLadder 문장을 도구 인자로 옮기지 못했다(reports/2026-10-28_humm_lm_sft_v2.md 3.2).
 영어 수치 질의와 det_cf 일부를 CLadder식 표면(style "bare")으로 쓴다: 무의미 변수명, 상태 이름 없는 'kwox / not kwox',
 'The probability of not kwox and kwoz is 5%.' 결합 문형, 'For those who are …' 조건부 문형, 'We know that … causes …' 규칙.
 도구 인자에서는 kwox=yes / kwox=no로 쓴다. CLadder 문항 자체는 쓰지 않는다.
 
 v3.2(GENERATORS_32): SFT v2.1은 'would having a sister positively affect heart condition?'처럼 상태 없이 변수 이름만 쓴 질문에서
-결과 상태를 잘못 골랐다(reports/2026-10-29_hume_lm_sft_v21.md 4절). ate·nde·nie 일반 문항 일부를 이 문형(form "named")으로 쓴다.
+결과 상태를 잘못 골랐다(reports/2026-10-29_humm_lm_sft_v21.md 4절). ate·nde·nie 일반 문항 일부를 이 문형(form "named")으로 쓴다.
 확률 문장이 늘 상태 1을 다루므로 상태 없는 이름은 상태 1을 뜻하고, 이때 처치·결과는 t = o = 1이다.
 
 v3.3(GENERATORS_33): v2.1은 Corr2Cause 원 벤치(변수 5–6개가 89%)에서 동치류를 손으로 나열하다 틀렸다(reports/2026-10-31_corr2cause_analysis.md).
 corr2cause를 변수 3–6개(5–6개 60%)로 늘리고, 원 벤치처럼 모든 상관·조건부 독립 관계를 나열하며, 가설 'via'를 원 벤치 정의(중간 변수를 거치는 경로)로 쓴다.
 정답은 humm.engine.discovery로 계산하고, 풀이는 causal_discovery 도구 호출(meta.call)이다.
 
-v3.5(GENERATORS_35): v2.6은 CLadder의 상태 없는 nie·nde 질문에서 처치를 거꾸로 골랐다(reports/2026-11-02_hume_lm_sft_v26.md).
+v3.5(GENERATORS_35): v2.6은 CLadder의 상태 없는 nie·nde 질문에서 처치를 거꾸로 골랐다(reports/2026-11-02_humm_lm_sft_v26.md).
 v3.2 named는 처치가 늘 '높음·있음' 같은 두드러진 상태라 모델이 상태 이름으로 처치를 골랐다. CLadder의 처치(X=1)는 조건부 확률 문장에서
 기준 다음에 나오는 상태이고 Gym도 같은 순서로 쓴다. named 문항의 절반은 처치 변수의 두 상태 이름을 맞바꿔(flip) 순서만 단서로 남긴다.
 있음/없음류 상태(yes, on, taken, done)는 CLadder에서도 늘 있음 쪽이 X=1이므로 맞바꾸지 않는다.
 
-v3.6(GENERATORS_36): v2.8은 CLadder exp_away(설명 효과)를 0.25만 맞혔다(reports/2026-11-05_hume_lm_sft_v211.md). 엔진·Gym에 이 유형이 없어
+v3.6(GENERATORS_36): v2.8은 CLadder exp_away(설명 효과)를 0.25만 맞혔다(reports/2026-11-05_humm_lm_sft_v211.md). 엔진·Gym에 이 유형이 없어
 공통 결과로 거르지 않은 correlation이나 ate를 불렀다(값 +0.0000). exp_away는 X → C ← Y에서 C=c인 경우만 볼 때 X에 따라 Y가 달라지는지 묻는다.
 엔진 질의는 correlation에 관측 조건 given = {C: c}를 붙인 것이다. CLadder처럼 P(X)와 P(Y | X, C) 넷을 준다.
 """

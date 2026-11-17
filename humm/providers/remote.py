@@ -1,10 +1,10 @@
-"""OpenAI 호환 서버(vLLM 등)로 Hume-LM을 부르는 공급자 (Step 12 온프레미스 서빙).
+"""OpenAI 호환 서버(vLLM 등)로 Humm-LM을 부르는 공급자 (Step 12 온프레미스 서빙).
 
 채팅 템플릿은 로컬 토크나이저로 입히고 /v1/completions에 원문 그대로 보낸다. 그래서 humm.lm.sample.generate_tools의 도구 루프
 (</tool_call>에서 멈추고 causal_engine 결과를 붙여 이어 쓰기)가 HF 모델과 같은 문자열로 돈다.
 
-    vllm serve models/hume-lm-9b-sft-v214 --served-model-name hume-lm-9b --port 8011
-    lm = RemoteProvider("http://127.0.0.1:8011/v1", "hume-lm-9b", tokenizer="models/hume-lm-9b-sft-v214")
+    vllm serve models/humm-lm-9b-sft-v214 --served-model-name humm-lm-9b --port 8011
+    lm = RemoteProvider("http://127.0.0.1:8011/v1", "humm-lm-9b", tokenizer="models/humm-lm-9b-sft-v214")
 """
 import json
 import urllib.request

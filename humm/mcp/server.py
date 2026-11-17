@@ -1,4 +1,4 @@
-"""humm-mcp: Hume 그래프·검증·인과 엔진·오케스트레이터를 MCP 도구로 노출한다.
+"""humm-mcp: Humm 그래프·검증·인과 엔진·오케스트레이터를 MCP 도구로 노출한다.
 
 실행: python -m humm.mcp   (stdio). Claude Desktop/Code 설정 예:
   {"mcpServers": {"humm": {"command": "python", "args": ["-m", "humm.mcp"], "cwd": "<humm 저장소>", "env": {"HUMM_LLM": "anthropic:claude-sonnet-5-5"}}}}
@@ -11,7 +11,7 @@ from mcp.server.fastmcp import FastMCP
 from .. import api
 
 mcp = FastMCP("humm", instructions=(
-    "Hume causal toolkit. Build a causal graph (HCG) from a CSV and/or documents, validate it against data, then answer causal questions. "
+    "Humm causal toolkit. Build a causal graph (HCG) from a CSV and/or documents, validate it against data, then answer causal questions. "
     "Typical flow: graph_from_table → (graph_from_text → graph_merge) → validate_run → ask. "
     "Every causal number must come from these tools; report the evidence path, assumptions and graph sensitivity that `ask` returns."))
 
@@ -88,39 +88,39 @@ def ask(question: str, graph_id: str, csv: str, experiment_csv: str = "", experi
 
 @mcp.tool()
 def fast_noul(proposition: str, context: str = "") -> str:
-    """Hume-Fast single-pass yes/no judgement. If escalate is true, do not use p_yes; route to ask or lm_verify instead."""
+    """Humm-Fast single-pass yes/no judgement. If escalate is true, do not use p_yes; route to ask or lm_verify instead."""
     return _json(api.fast_noul(proposition, context))
 
 
 @mcp.tool()
 def fast_choice(question: str, options: list[str], context: str = "") -> str:
-    """Hume-Fast single-pass multiple choice. If escalate is true, the answer is low-confidence and must be escalated."""
+    """Humm-Fast single-pass multiple choice. If escalate is true, the answer is low-confidence and must be escalated."""
     return _json(api.fast_choice(question, options, context))
 
 
 @mcp.tool()
 def fast_score(question: str, levels: int = 5, context: str = "") -> str:
-    """Hume-Fast single-pass ordinal score (1..levels) with its distribution. Escalate when escalate is true."""
+    """Humm-Fast single-pass ordinal score (1..levels) with its distribution. Escalate when escalate is true."""
     return _json(api.fast_score(question, levels, context))
 
 
 @mcp.tool()
 def classify_question(question: str, graph_id: str = "") -> str:
-    """Classify a causal question by rung (1 association, 2 intervention, 3 counterfactual) with Hume-Fast, escalating to Hume-LM
+    """Classify a causal question by rung (1 association, 2 intervention, 3 counterfactual) with Humm-Fast, escalating to Humm-LM
     when unsure. With graph_id, also map treatment/outcome/mediators onto graph variables."""
     return _json(api.classify_question(question, graph_id))
 
 
 @mcp.tool()
 def lm_verify(graph_id: str, csv: str, treatment: str, outcome: str) -> str:
-    """Hume-LM (tool mode) independently answers whether the treatment raises the outcome from the verbalized graph and fitted
+    """Humm-LM (tool mode) independently answers whether the treatment raises the outcome from the verbalized graph and fitted
     probabilities; agree compares it with the sign of the engine ATE (None when the engine CI contains 0)."""
     return _json({k: v for k, v in api.lm_verify(graph_id, csv, treatment, outcome).items() if k != "trace"})
 
 
 @mcp.tool()
 def ask_v1(question: str, graph_id: str, csv: str, experiment_csv: str = "", experiment_treatment: str = "", verify: bool = True) -> str:
-    """Like ask, plus orchestrator v1 steps: Hume-Fast rung routing for the question kind and a Hume-LM independent check."""
+    """Like ask, plus orchestrator v1 steps: Humm-Fast rung routing for the question kind and a Humm-LM independent check."""
     return _json(api.ask_v1(question, graph_id, csv, experiment_csv or None, experiment_treatment or None, verify=verify))
 
 

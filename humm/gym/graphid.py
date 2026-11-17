@@ -1,6 +1,6 @@
-"""Hume-Gym v3.9 (SFT v2.14): 그래프만 주는 식별 질의 셋. 앞문 기준 집합(frontdoor)·도구변수(instrument)·관측 안 된 교란이 있는 식별(cei).
+"""Humm-Gym v3.9 (SFT v2.14): 그래프만 주는 식별 질의 셋. 앞문 기준 집합(frontdoor)·도구변수(instrument)·관측 안 된 교란이 있는 식별(cei).
 
-9B v2.12 CaLM에서 FAS 7·IV 40·CEI 7–40이었다(reports/2026-11-08_hume_lm_9b_sft_v212.md). 모델이 adjustment·identify를 잘못 불렀고,
+9B v2.12 CaLM에서 FAS 7·IV 40·CEI 7–40이었다(reports/2026-11-08_humm_lm_9b_sft_v212.md). 모델이 adjustment·identify를 잘못 불렀고,
 엔진에는 앞문 기준·도구변수 집합 판정과 교란 쌍을 받는 인자가 없었다. 엔진에 frontdoor·instrument 질의와 confounded 인자(ID 알고리즘)를 더하고,
 이 문항으로 호출 궤적을 만든다.
 

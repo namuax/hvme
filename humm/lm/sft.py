@@ -1,4 +1,4 @@
-"""Hume-LM SFT (Step 9-1): Gym CoT 프롬프트 → 풀이 궤적을 학습한다. 손실은 풀이 토큰에만 준다.
+"""Humm-LM SFT (Step 9-1): Gym CoT 프롬프트 → 풀이 궤적을 학습한다. 손실은 풀이 토큰에만 준다.
 
 - 교사: 풀이 템플릿 궤적(humm.lm.solutions, 엔진 계산 과정) + 선택적으로 9B rejection sampling 궤적(humm.lm.sample)
 - 입력 형식은 추론과 같다: 채팅 템플릿(enable_thinking=False)의 생성 프롬프트 뒤에 풀이와 EOS를 붙인다

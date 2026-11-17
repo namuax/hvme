@@ -16,7 +16,7 @@ description: 처치 효과·개입 효과(ATE)를 계산할 때 쓴다. "광고�
 4. `strategy`가 `not_identified`이면 추정을 멈추고 "식별 불가 + 필요한 데이터"로 답한다(어떤 변수를 측정하면 백도어·프론트도어·IV가 열리는지 적는다).
 5. 추정: `humm.engine_estimate(graph_id, csv, treatment, outcome, n_boot=200)`을 부른다.
 6. 엔드투엔드 답이 필요하면 `humm.ask(question, graph_id, csv)`를 한 번 불러 추정·반박·민감도·가정을 함께 받는다.
-7. 독립 확인: `humm.lm_verify(graph_id, csv, treatment, outcome)`로 Hume-LM의 답과 엔진 부호가 맞는지 본다.
+7. 독립 확인: `humm.lm_verify(graph_id, csv, treatment, outcome)`로 Humm-LM의 답과 엔진 부호가 맞는지 본다.
 
 ## 흄 원칙 체크리스트
 
@@ -31,7 +31,7 @@ description: 처치 효과·개입 효과(ATE)를 계산할 때 쓴다. "광고�
 - `engine_identify`: `strategy`(backdoor/frontdoor/iv/no_effect/not_identified), `variables`(조정·매개·도구 변수), `expression`(추정식), `latent`(관측되지 않은 노드)이다.
 - `engine_estimate`: `value`(ATE, 처치 1 대 0의 결과=1 확률 차이), `se`, `ci`(부트스트랩 95% 구간), `method`, `strategy`이다.
 - `ask` 결과: `estimates.ate.value`·`estimates.ate.ci`, `adjustment`, `expression`, `paths`(근거 경로), `backdoor_paths`, `refutation`, `sensitivity_table`, `graph_sensitivity`, `assumptions`, `answer`이다.
-- `lm_verify`: `agree`가 false이면 엔진과 Hume-LM이 부호에서 갈렸으므로 그래프·인자를 다시 본다. `trace`에 LM의 도구 호출 과정이 있다.
+- `lm_verify`: `agree`가 false이면 엔진과 Humm-LM이 부호에서 갈렸으므로 그래프·인자를 다시 본다. `trace`에 LM의 도구 호출 과정이 있다.
 - `strategy="no_effect"`는 그래프에 인과 경로가 없다는 뜻이며, 결론이 그래프 구조에 전적으로 기댄다.
 
 ## 한계 고지

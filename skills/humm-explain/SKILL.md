@@ -41,7 +41,7 @@ description: 인과 분석 결과를 사용자에게 보고할 때 쓴다. "결�
 - `graph_sensitivity`·`sensitivity_table`: 대안 그래프 수, 부호 뒤집힘, 효과 소멸, 숨은 교란에서 식별 붕괴 여부이다.
 - `experiment`: L4 실험 대조 결과(`consistent` 포함)이며 실험 데이터를 준 경우에만 있다.
 - `parser`: 질의 분석 방식(`rules`, `rules+<llm>`, v1의 `rules+rung:fast`·`rules+rung:lm`)이다.
-- `route`·`lm_check`(`ask_v1`만): Rung 분류(확신도, fast/lm)와 Hume-LM 독립 풀이(`lm_answer`, `agree`)이다. `agree`가 false면 결론을 내리기 전에 그래프와 가정을 다시 보라고 적고, null이면 판단 보류라고 적는다. markdown에는 "Hume-LM 검증" 절로 들어 있다.
+- `route`·`lm_check`(`ask_v1`만): Rung 분류(확신도, fast/lm)와 Humm-LM 독립 풀이(`lm_answer`, `agree`)이다. `agree`가 false면 결론을 내리기 전에 그래프와 가정을 다시 보라고 적고, null이면 판단 보류라고 적는다. markdown에는 "Humm-LM 검증" 절로 들어 있다.
 
 ## 한계 고지
 

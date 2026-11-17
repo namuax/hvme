@@ -63,7 +63,7 @@ def main():
     ap.add_argument("--per-rung", type=int, default=50, help="cladder: Rung마다 문항 수(Fast 평가 600문항 = 200)")
     ap.add_argument("--split", default="test", help="kmmlu: test(평가) 또는 train(한국어 일반 궤적 수집)")
     ap.add_argument("--lm-url", help="Phase A: vLLM 서버(OpenAI 호환) 주소. 주면 --model은 토크나이저 경로로만 쓴다")
-    ap.add_argument("--served", default="hume-lm-9b", help="--lm-url 서버의 모델 이름")
+    ap.add_argument("--served", default="humm-lm-9b", help="--lm-url 서버의 모델 이름")
     a = ap.parse_args()
 
     import pandas as pd

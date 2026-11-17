@@ -1,4 +1,4 @@
-"""Hume-Gym 문항으로 모델을 평가한다. direct는 답 토큰 확률(Hume-Fast 관점), cot는 풀이 생성 후 채점(Hume-LM 관점)."""
+"""Humm-Gym 문항으로 모델을 평가한다. direct는 답 토큰 확률(Humm-Fast 관점), cot는 풀이 생성 후 채점(Humm-LM 관점)."""
 import numpy as np
 import pandas as pd
 

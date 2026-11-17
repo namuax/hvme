@@ -1,6 +1,6 @@
-"""Hume-Gym v3.8 (SFT v2.13): 그래프만 주고 부모·조상(원인)을 묻는 구조 질의(query_type "ancestry").
+"""Humm-Gym v3.8 (SFT v2.13): 그래프만 주고 부모·조상(원인)을 묻는 구조 질의(query_type "ancestry").
 
-9B 평가표(reports/2026-11-08_hume_lm_9b_sft_v212.md 3.1절)에서 CaLM AR·CA FP·FA가 기반 80–87 → 57로 떨어졌다.
+9B 평가표(reports/2026-11-08_humm_lm_9b_sft_v212.md 3.1절)에서 CaLM AR·CA FP·FA가 기반 80–87 → 57로 떨어졌다.
 엔진에 부모·조상 질의가 없어 모델이 causal_graph의 dsep을 불러 'd-분리 아님'을 '원인이다·부모다'로 읽었다.
 엔진에 path 질의를 더하고(humm.lm.tools.run_graph), 이 문항으로 path 호출 궤적을 만든다.
 

@@ -1,4 +1,4 @@
-"""작은 무작위 모델로 Hume-Fast 학습 루프를 확인한다(torch·transformers가 있을 때만)."""
+"""작은 무작위 모델로 Humm-Fast 학습 루프를 확인한다(torch·transformers가 있을 때만)."""
 import numpy as np
 import pytest
 

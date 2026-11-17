@@ -18,7 +18,7 @@ description: 사용자가 "왜 ~했나?", "~하면 어떻게 돼?", "~가 ~의 �
    - Rung 1(`kind="association"`): `humm.ask(question, graph_id, csv)`로 관찰 차이와 교란 조정 효과를 함께 받아 비교한다.
    - Rung 2(`kind="ate"`): `humm-identify-estimate`로 넘긴다.
    - Rung 3(`kind="ett"`·`"mediation"`, PN·PS 같은 "그때 ~했다면"): `humm-counterfactual`로 넘긴다.
-   - 한 번에 끝까지 처리할 때는 `humm.ask_v1(question, graph_id, csv)`를 쓴다. 유형 키워드가 없는 질문의 유형을 Rung 분류로 정하고, 답에 `route`(분류)와 `lm_check`(Hume-LM 독립 풀이와 엔진 부호 대조)를 붙인다.
+   - 한 번에 끝까지 처리할 때는 `humm.ask_v1(question, graph_id, csv)`를 쓴다. 유형 키워드가 없는 질문의 유형을 Rung 분류로 정하고, 답에 `route`(분류)와 `lm_check`(Humm-LM 독립 풀이와 엔진 부호 대조)를 붙인다.
 5. 데이터가 없으면 수치를 만들지 않고, 그래프 경로만으로 정성 답(경로 유무·부호)을 하거나 필요한 데이터를 말한다.
 
 ## 흄 원칙 체크리스트
@@ -33,7 +33,7 @@ description: 사용자가 "왜 ~했나?", "~하면 어떻게 돼?", "~가 ~의 �
 
 - `classify_question` 결과의 `rung`(1/2/3)·`kind`(ate/association/mediation/ett)가 경로를 정한다.
 - `mediators`가 비어 있지 않으면 매개 질문이므로 Rung 3으로 본다.
-- `router="fast"`는 Hume-Fast 분류가 확신한다는 뜻이고, `"lm"`은 확신이 낮아 상위 경로로 올렸다는 뜻이다.
+- `router="fast"`는 Humm-Fast 분류가 확신한다는 뜻이고, `"lm"`은 확신이 낮아 상위 경로로 올렸다는 뜻이다.
 - Rung 1 경로의 `ask` 결과에서는 `estimates.association`(관찰 차이)과 `estimates.ate`(조정 효과)의 차이를 교란 경로 몫으로 읽는다(`backdoor_paths` 참고).
 
 ## 한계 고지

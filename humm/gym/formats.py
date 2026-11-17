@@ -1,8 +1,8 @@
-"""Hume-Gym 문항을 모델 입력으로 바꾸고, 모델 출력을 채점한다.
+"""Humm-Gym 문항을 모델 입력으로 바꾸고, 모델 출력을 채점한다.
 
-mode="direct": 답 토큰 하나만 읽는 형식(Hume-Fast의 Noul·Choice·Score, option_probs 평가)
-mode="cot":    단계별 풀이 후 'Final answer: ...' 로 끝내는 형식(Hume-LM SFT·GRPO, 생성형 평가)
-mode="tool":   cot와 같되 수치 계산은 causal_engine 도구 호출로 한다(Hume-LM SFT v2, humm.lm.tools)
+mode="direct": 답 토큰 하나만 읽는 형식(Humm-Fast의 Noul·Choice·Score, option_probs 평가)
+mode="cot":    단계별 풀이 후 'Final answer: ...' 로 끝내는 형식(Humm-LM SFT·GRPO, 생성형 평가)
+mode="tool":   cot와 같되 수치 계산은 causal_engine 도구 호출로 한다(Humm-LM SFT v2, humm.lm.tools)
 """
 import json
 import re

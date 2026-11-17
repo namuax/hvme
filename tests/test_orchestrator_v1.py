@@ -1,4 +1,4 @@
-"""오케스트레이터 v1(Step 11): 데모 2종, Rung 라우터의 상향, Hume-LM 검증 경로(원격 생성 흉내)."""
+"""오케스트레이터 v1(Step 11): 데모 2종, Rung 라우터의 상향, Humm-LM 검증 경로(원격 생성 흉내)."""
 import numpy as np
 import pytest
 

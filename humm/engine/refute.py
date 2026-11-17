@@ -1,4 +1,4 @@
-"""추정치 반박 테스트 (DoWhy refuter와 같은 발상, Hume 추정기 위에서 동작).
+"""추정치 반박 테스트 (DoWhy refuter와 같은 발상, Humm 추정기 위에서 동작).
 
 - placebo: 처치를 무작위로 섞으면 효과가 0이 되어야 한다
 - random_common_cause: 독립 난수 변수를 공통 원인으로 추가해도 효과가 그대로여야 한다

@@ -1,4 +1,4 @@
-"""Hume-Gym 데이터셋 생성·저장.
+"""Humm-Gym 데이터셋 생성·저장.
 
 - train/dev: 학습 도메인(marketing·manufacturing·medical), test: 보류 도메인(it_ops·무의미 이름)
 - 분할마다 난수 스트림을 분리하고, 문맥+질문이 같은 문항은 분할 안팎에서 중복을 제거한다.

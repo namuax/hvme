@@ -1,6 +1,6 @@
-"""Hume-Gym v3.7 (SFT v2.12): 값을 JSON으로 묻는 수치 질의(kind "prob").
+"""Humm-Gym v3.7 (SFT v2.12): 값을 JSON으로 묻는 수치 질의(kind "prob").
 
-4B 평가표(reports/2026-11-06_hume_lm_eval_table.md)에서 CaLM·CauGym의 수치 과제는 예/아니오와 함께 값 자체(PROB)를 채점했다.
+4B 평가표(reports/2026-11-06_humm_lm_eval_table.md)에서 CaLM·CauGym의 수치 과제는 예/아니오와 함께 값 자체(PROB)를 채점했다.
 v2.11은 거기서 셋을 잃었다.
 - ETT 값의 정의가 교과서(실제 − 반사실)라 엔진 value(반사실 − 실제)와 부호가 반대다. 엔진 결과의 'ETT =' 줄을 옮겨 쓴다.
 - PN·PS(Tian–Pearl 상·하한)가 엔진에 없었다. 엔진 질의 pn·ps와 bound를 쓴다.

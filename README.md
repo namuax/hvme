@@ -6,7 +6,7 @@
 
 > Status: v0.1.0, private preview. Model weights are not published yet (see [Models](#models)).
 
-humm turns tables and documents into a causal DAG (HCG, *Hume Causal Graph*), checks the DAG against the data, and answers causal questions with numbers that come from a symbolic engine rather than from the language model's guess. A small LLM is trained to translate a question into engine calls and to read the result back; a single-pass judge routes easy questions and calibrates confidence.
+humm turns tables and documents into a causal DAG (HCG, *Humm Causal Graph*), checks the DAG against the data, and answers causal questions with numbers that come from a symbolic engine rather than from the language model's guess. A small LLM is trained to translate a question into engine calls and to read the result back; a single-pass judge routes easy questions and calibrates confidence.
 
 ## What is different
 

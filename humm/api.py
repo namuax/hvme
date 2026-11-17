@@ -1,4 +1,4 @@
-"""경로 기반 Hume API. MCP 도구·노트북·스크립트가 같은 함수를 쓴다.
+"""경로 기반 Humm API. MCP 도구·노트북·스크립트가 같은 함수를 쓴다.
 
 - 그래프는 data/graphs/<graph_id>.hcg.json 에 저장하고 graph_id로 주고받는다.
 - 데이터는 CSV 경로, 문서는 JSONL({"id", "text"}) 경로나 .txt/.md 파일이 든 폴더로 받는다.
@@ -144,15 +144,15 @@ def ask(question: str, graph_id: str, csv: str, experiment_csv: str | None = Non
     return out
 
 
-# ---------- v1: Hume-Fast·Hume-LM (Step 11) ----------
+# ---------- v1: Humm-Fast·Humm-LM (Step 11) ----------
 # 모델 경로·장치는 환경 변수로 바꾼다. 처음 부를 때 한 번 올리고 프로세스 안에서 다시 쓴다.
-FAST_PATH = os.environ.get("HUMM_FAST", str(ROOT / "models" / "hume-fast-4b-v2-story-distill"))
-LM_PATH = os.environ.get("HUMM_LM", str(ROOT / "models" / "hume-lm-9b-sft-v217b"))
+FAST_PATH = os.environ.get("HUMM_FAST", str(ROOT / "models" / "humm-fast-4b-v2-story-distill"))
+LM_PATH = os.environ.get("HUMM_LM", str(ROOT / "models" / "humm-lm-9b-sft-v217b"))
 THRESHOLD = float(os.environ.get("HUMM_FAST_THRESHOLD", "0.8"))  # Fast 확신도(최대 보기 확률)가 이보다 낮으면 escalate
 # Rung 분류는 Rung 문항으로 이어 학습한 라우터가 맡는다(CLadder Rung 0.515 → 0.967). 예/아니오 판정은 Corr2Cause가 떨어져 FAST_PATH로 둔다.
-_ROUTER = ROOT / "models" / "hume-fast-4b-v2-router-ko"
+_ROUTER = ROOT / "models" / "humm-fast-4b-v2-router-ko"
 ROUTER_PATH = os.environ.get("HUMM_ROUTER", str(_ROUTER) if _ROUTER.exists() else FAST_PATH)
-ROUTER_THRESHOLD = float(os.environ.get("HUMM_ROUTER_THRESHOLD", "0.9"))  # 라우터 확신도가 이보다 낮으면 Hume-LM이 Rung을 고른다
+ROUTER_THRESHOLD = float(os.environ.get("HUMM_ROUTER_THRESHOLD", "0.9"))  # 라우터 확신도가 이보다 낮으면 Humm-LM이 Rung을 고른다
 _MODELS: dict = {}
 
 
@@ -208,7 +208,7 @@ def fast_score(question: str, levels: int = 5, context: str = "") -> dict:
 
 
 def classify_question(question: str, graph_id: str = "") -> dict:
-    """Rung 분류(Fast, 저신뢰면 Hume-LM). graph_id를 주면 질문에 나온 그래프 변수로 처치·결과·매개도 정한다."""
+    """Rung 분류(Fast, 저신뢰면 Humm-LM). graph_id를 주면 질문에 나온 그래프 변수로 처치·결과·매개도 정한다."""
     from .orchestrator.query import KEYWORDS, parse_rules
     from .orchestrator.route import QueryRouter
     r = QueryRouter(_router(), _lm(), ROUTER_THRESHOLD).classify([question])[0]
@@ -221,7 +221,7 @@ def classify_question(question: str, graph_id: str = "") -> dict:
 
 
 def lm_verify(graph_id: str, csv: str, treatment: str, outcome: str) -> dict:
-    """Hume-LM(tool 모드)이 그래프 + 데이터로 적합한 확률표를 읽고 '처치가 결과를 올리는가'를 따로 풀어 엔진 ATE 부호와 비교한다."""
+    """Humm-LM(tool 모드)이 그래프 + 데이터로 적합한 확률표를 읽고 '처치가 결과를 올리는가'를 따로 풀어 엔진 ATE 부호와 비교한다."""
     from .orchestrator.route import lm_verify as verify
     hcg, df = _load(graph_id), pd.read_csv(csv)
     g = hcg.to_networkx()
@@ -232,7 +232,7 @@ def lm_verify(graph_id: str, csv: str, treatment: str, outcome: str) -> dict:
 
 def ask_v1(question: str, graph_id: str, csv: str, experiment_csv: str | None = None, experiment_treatment: str | None = None,
            llm: str | None = None, n_perm: int = 100, verify: bool = True) -> dict:
-    """ask와 같고, 질의 분석에 Fast Rung 분류(저신뢰면 Hume-LM)를, 검증에 Hume-LM 독립 풀이를 더한다."""
+    """ask와 같고, 질의 분석에 Fast Rung 분류(저신뢰면 Humm-LM)를, 검증에 Humm-LM 독립 풀이를 더한다."""
     from .orchestrator.route import QueryRouter
     provider = _llm(llm) if (llm or os.environ.get("HUMM_LLM")) else None
     exps = {experiment_treatment: pd.read_csv(experiment_csv)} if experiment_csv else {}

@@ -1,4 +1,4 @@
-"""Hume-Fast 추론기: 한 번의 순전파로 답 토큰(보기) 위의 확률을 낸다 (04_hume_fast.md 2장).
+"""Humm-Fast 추론기: 한 번의 순전파로 답 토큰(보기) 위의 확률을 낸다 (04_humm_fast.md 2장).
 
 공급자 인터페이스(option_probs)를 따르므로 Step 5 쌍별 방향 질의·Step 6 L3 검증·Gym 평가에 그대로 끼운다.
 보정 온도는 보기 종류(noul·choice·score)별로 둔다. 학습한 모델은 save()로 가중치·토크나이저·온도를 함께 저장한다.
@@ -21,12 +21,12 @@ def kind_of(labels) -> str:
 
 def temp_key(prompt: str, labels) -> str:
     """보정 온도 키. 도메인 지식 판단과 계산형 판단(Gym 등)은 과신 정도가 달라 온도를 따로 둔다
-    (2026-10-25 GPU: 한 온도를 함께 쓰면 쌍별 방향 ECE 0.17, 따로 맞추면 0.08. reports/2026-10-25_hume_fast.md)."""
+    (2026-10-25 GPU: 한 온도를 함께 쓰면 쌍별 방향 ECE 0.17, 따로 맞추면 0.08. reports/2026-10-25_humm_fast.md)."""
     return f"knowledge:{kind_of(labels)}" if prompt.startswith(KNOWLEDGE_PREFIX) else kind_of(labels)
 
 
 def confidence(p: np.ndarray) -> float:
-    """1 − 정규화 엔트로피 (04_hume_fast.md)."""
+    """1 − 정규화 엔트로피 (04_humm_fast.md)."""
     p = np.clip(np.asarray(p, float), 1e-12, 1)
     return float(1 + (p * np.log(p)).sum() / np.log(len(p)))
 
@@ -34,7 +34,7 @@ def confidence(p: np.ndarray) -> float:
 class FastJudge:
     supports_logits = True
 
-    def __init__(self, model, tok, name: str = "hume-fast", temperature: dict | None = None, batch_size: int = 16, max_length: int = 4096):
+    def __init__(self, model, tok, name: str = "humm-fast", temperature: dict | None = None, batch_size: int = 16, max_length: int = 4096):
         self.model, self.tok, self.name = model, tok, name
         self.temperature = temperature or {}
         self.batch_size, self.max_length = batch_size, max_length
@@ -45,13 +45,13 @@ class FastJudge:
         tok = AutoTokenizer.from_pretrained(path_or_id, padding_side="left")
         tok.pad_token = tok.pad_token or tok.eos_token
         model = AutoModelForCausalLM.from_pretrained(path_or_id, dtype=dtype, device_map=device).eval()
-        meta = Path(path_or_id) / "hume_fast.json"
+        meta = Path(path_or_id) / "humm_fast.json"
         temp = json.loads(meta.read_text())["temperature"] if meta.exists() else {}
         return cls(model, tok, Path(path_or_id).name if meta.exists() else path_or_id, temp, **kw)
 
     def save_temperature(self, path: str | Path) -> Path:
-        """가중치는 그대로 두고 hume_fast.json의 온도만 바꾼다."""
-        meta = Path(path) / "hume_fast.json"
+        """가중치는 그대로 두고 humm_fast.json의 온도만 바꾼다."""
+        meta = Path(path) / "humm_fast.json"
         meta.write_text(json.dumps(json.loads(meta.read_text()) | {"temperature": self.temperature}, ensure_ascii=False, indent=1))
         return meta
 
@@ -59,7 +59,7 @@ class FastJudge:
         path = Path(path)
         self.model.save_pretrained(path)
         self.tok.save_pretrained(path)
-        (path / "hume_fast.json").write_text(json.dumps({"temperature": self.temperature} | (extra or {}), ensure_ascii=False, indent=1))
+        (path / "humm_fast.json").write_text(json.dumps({"temperature": self.temperature} | (extra or {}), ensure_ascii=False, indent=1))
         return path
 
     # ---------- 입력 ----------

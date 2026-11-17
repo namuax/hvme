@@ -10,11 +10,11 @@ from .tools import parse_call
 
 # 구조 추론형과 4B가 약한 nie를 더 많이 뽑는다 (reports/2026-10-25_gym_baseline.md 3·4장)
 WEIGHTS = {"corr2cause": 2.0, "identify": 2.0, "backadj": 2.0, "nie": 1.5, "dsep": 1.2}
-# SFT v2(Gym v3): 1차에서 CLadder로 이어지지 않은 반사실형(ett·det_cf)과 구조 추론형을 더 뽑는다 (reports/2026-10-28_hume_lm_sft.md 3장)
+# SFT v2(Gym v3): 1차에서 CLadder로 이어지지 않은 반사실형(ett·det_cf)과 구조 추론형을 더 뽑는다 (reports/2026-10-28_humm_lm_sft.md 3장)
 WEIGHTS_V3 = {"corr2cause": 1.5, "identify": 1.5, "backadj": 1.5, "det_cf": 1.5, "ett": 1.3, "nie": 1.3, "dsep": 1.2}
-# SFT v2.1(Gym v3.1): v2에서 퇴보한 구조 추론형을 유형당 약 1,350개로 늘린다 (reports/2026-10-28_hume_lm_sft_v2.md 2.2)
+# SFT v2.1(Gym v3.1): v2에서 퇴보한 구조 추론형을 유형당 약 1,350개로 늘린다 (reports/2026-10-28_humm_lm_sft_v2.md 2.2)
 WEIGHTS_V31 = {"corr2cause": 2.0, "identify": 2.0, "backadj": 2.0, "dsep": 2.0, "det_cf": 1.3, "ett": 1.2, "nie": 1.2}
-# GRPO(Gym v3.2): v2.1이 CLadder·Gym에서 틀린 유형(ett·nde·nie·backadj·corr2cause·marginal)에서 보상 신호가 나온다 (reports/2026-10-29_hume_lm_sft_v21.md 3·4절)
+# GRPO(Gym v3.2): v2.1이 CLadder·Gym에서 틀린 유형(ett·nde·nie·backadj·corr2cause·marginal)에서 보상 신호가 나온다 (reports/2026-10-29_humm_lm_sft_v21.md 3·4절)
 WEIGHTS_GRPO = {"ett": 2.0, "nde": 2.0, "nie": 2.0, "backadj": 2.0, "corr2cause": 2.0, "marginal": 1.5, "correlation": 0.7, "cde": 0.5, "det_cf": 0.5, "ate_score": 0.5}
 
 

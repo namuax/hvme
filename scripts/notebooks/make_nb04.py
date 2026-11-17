@@ -2,9 +2,9 @@ import sys
 import nbformat as nbf
 
 cells = [
-"""md:# 04. Hume-Gym — 검증 가능한 인과 추론 문제 생성기
+"""md:# 04. Humm-Gym — 검증 가능한 인과 추론 문제 생성기
 
-Hume-Gym은 Hume-LM과 Hume-Fast의 학습·평가 데이터를 만든다. 문제마다 무작위 인과 그래프와 SCM을 만들고, 정답은 `humm.engine`(노트북 03)이 계산한다. 정답을 기호적으로 확인할 수 있기 때문에 SFT 데이터 선별(rejection sampling)과 GRPO 보상에 그대로 쓸 수 있다.
+Humm-Gym은 Humm-LM과 Humm-Fast의 학습·평가 데이터를 만든다. 문제마다 무작위 인과 그래프와 SCM을 만들고, 정답은 `humm.engine`(노트북 03)이 계산한다. 정답을 기호적으로 확인할 수 있기 때문에 SFT 데이터 선별(rejection sampling)과 GRPO 보상에 그대로 쓸 수 있다.
 
 | 질의 유형 | Rung | 형식 | 내용 |
 |---|---|---|---|
@@ -29,7 +29,7 @@ from humm.paths import GYM
 pd.set_option("display.max_colwidth", 120)""",
 """md:## 1. 문항 예시
 
-같은 질의 유형을 한국어와 영어로 하나씩 본다. `render(item, "direct")`는 답 토큰 하나만 받는 형식(Hume-Fast), `render(item, "cot")`는 단계별 풀이를 요구하는 형식(Hume-LM)이다.""",
+같은 질의 유형을 한국어와 영어로 하나씩 본다. `render(item, "direct")`는 답 토큰 하나만 받는 형식(Humm-Fast), `render(item, "cot")`는 단계별 풀이를 요구하는 형식(Humm-LM)이다.""",
 """sample = generate(240, "train", seed=42)
 ko_nie = next(d for d in sample if d["query_type"] == "nie" and d["lang"] == "ko")
 print(render(ko_nie, "cot"))
@@ -57,9 +57,9 @@ stats.pivot_table(index="query_type", columns="split", values="n", aggfunc="sum"
 test = read_jsonl(GYM / "test.jsonl")
 print("test 재검증 불일치:", len(audit(test)))
 pd.DataFrame(test).groupby(["domain", "lang"]).size().unstack()""",
-"""md:## 4. (GPU) Qwen3.5 기준선 — Hume-Gym test
+"""md:## 4. (GPU) Qwen3.5 기준선 — Humm-Gym test
 
-학습 전에 두 모델이 Hume-Gym에서 몇 점인지 잰다. direct는 test 전체, cot는 시간이 오래 걸리므로 질의 유형별로 균형을 맞춘 600문항만 쓴다. 이 점수가 Step 8(Hume-Fast)·Step 9(Hume-LM)의 출발점이다.""",
+학습 전에 두 모델이 Humm-Gym에서 몇 점인지 잰다. direct는 test 전체, cot는 시간이 오래 걸리므로 질의 유형별로 균형을 맞춘 600문항만 쓴다. 이 점수가 Step 8(Humm-Fast)·Step 9(Humm-LM)의 출발점이다.""",
 """import gc
 
 import torch

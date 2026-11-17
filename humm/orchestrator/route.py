@@ -1,8 +1,8 @@
 """오케스트레이터 v1의 두 모델 단계 (02_proposal.md 7장).
 
-① 질의 분석: Hume-Fast가 질문의 Rung(1 연관·2 개입·3 반사실)을 한 번의 순전파로 고른다. 확신도(최대 보기 확률)가
-   threshold보다 낮으면 Hume-LM에 JSON으로 다시 묻는다. 변수(처치·결과·매개)는 v0처럼 질문 문자열의 표현으로 정한다.
-⑤ 검증: Hume-LM(tool 모드)이 그래프와 데이터로 적합한 확률표를 Gym 문맥으로 읽고 "처치가 결과를 올리는가"를 따로 푼다.
+① 질의 분석: Humm-Fast가 질문의 Rung(1 연관·2 개입·3 반사실)을 한 번의 순전파로 고른다. 확신도(최대 보기 확률)가
+   threshold보다 낮으면 Humm-LM에 JSON으로 다시 묻는다. 변수(처치·결과·매개)는 v0처럼 질문 문자열의 표현으로 정한다.
+⑤ 검증: Humm-LM(tool 모드)이 그래프와 데이터로 적합한 확률표를 Gym 문맥으로 읽고 "처치가 결과를 올리는가"를 따로 푼다.
    엔진 추정 ATE의 부호와 비교해 일치 여부를 붙인다. LM은 수치를 직접 만들지 않고 causal_engine 도구로 계산한다.
 """
 import re
@@ -83,7 +83,7 @@ def verify_item(hcg: HCG, df: pd.DataFrame, x: str, y: str) -> dict:
 
 
 def lm_verify(lm, hcg: HCG, df: pd.DataFrame, x: str, y: str, engine_ate: float, engine_ci=None, max_new_tokens: int = 1536) -> dict:
-    """lm: HFProvider(Hume-LM). 엔진 CI가 0을 포함하면 부호가 정해지지 않아 agree는 None이다."""
+    """lm: HFProvider(Humm-LM). 엔진 CI가 0을 포함하면 부호가 정해지지 않아 agree는 None이다."""
     from ..lm.sample import generate_tools
 
     item = verify_item(hcg, df, x, y)
@@ -100,5 +100,5 @@ def verify_markdown(v: dict) -> str:
     state = {True: "일치", False: "불일치", None: "판단 보류"}[v["agree"]]
     why = " 엔진 95% 구간이 0을 포함해 부호를 비교하지 않았다." if v["engine_sign"] is None else ""
     hid = f" 관측되지 않는 조상 {', '.join(v['latent'])}은 LM 문맥에 없다." if v["latent"] else ""
-    return (f"### Hume-LM 검증\n\nHume-LM(tool 모드)이 같은 그래프와 데이터로 적합한 확률표를 읽고 따로 풀었다. "
+    return (f"### Humm-LM 검증\n\nHumm-LM(tool 모드)이 같은 그래프와 데이터로 적합한 확률표를 읽고 따로 풀었다. "
             f"답: **{v['lm_answer']}**, 엔진 ATE {v['engine_ate']:+.3f} → **{state}**.{why}{hid} 도구 호출 {v['n_tool_calls']}번.\n")

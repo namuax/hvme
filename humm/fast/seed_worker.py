@@ -17,7 +17,7 @@ import pandas as pd
 
 from humm.paths import RESULTS, ROOT
 
-OUT, LORAS, V1 = RESULTS / "fast_v2_seeds", ROOT / "models" / "fast_seeds", ROOT / "models" / "hume-fast-4b"
+OUT, LORAS, V1 = RESULTS / "fast_v2_seeds", ROOT / "models" / "fast_seeds", ROOT / "models" / "humm-fast-4b"
 
 
 def run_arm(inputs: dict, cfg: str, seed: int, device: str, out: Path = OUT, loras: Path = LORAS) -> str:

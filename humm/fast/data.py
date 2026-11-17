@@ -1,7 +1,7 @@
-"""Hume-Fast 학습·평가 문항.
+"""Humm-Fast 학습·평가 문항.
 
 문항 = {"id", "prompt", "labels"(답 토큰), "target"(labels 위의 목표 분포), "kind"(noul·choice·score), "task", "lang", "source"}.
-- gym: Hume-Gym direct 형식(정답 라벨, 원-핫)
+- gym: Humm-Gym direct 형식(정답 라벨, 원-핫)
 - pairwise: 엣지 방향 Choice. Step 5 정형 파이프라인의 쌍별 질의(PAIR_PROMPT)와 같은 문장이라 학습한 모델을 그대로 끼울 수 있다
 - verify: 반사실 의존 Noul. Step 6 텍스트 파이프라인의 L3 검증(VERIFY_PROMPT)과 같은 문장
 target에 원-핫이 아닌 분포를 넣으면 연성 라벨로 학습한다(손실은 같은 교차 엔트로피).

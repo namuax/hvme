@@ -26,7 +26,7 @@ class Answer:
     draft: str = ""  # LLM이 쓴 요약 원문
     issues: list | None = None  # 요약 검사 결과. None이면 LLM 요약을 쓰지 않았다
     route: dict | None = None  # v1 질의 분석(Rung, 확신도, fast/lm)
-    check: dict | None = None  # v1 Hume-LM 검증
+    check: dict | None = None  # v1 Humm-LM 검증
 
     def to_dict(self) -> dict:
         a = self.analysis
@@ -52,8 +52,8 @@ class Orchestrator:
     def __init__(self, hcg: HCG, df: pd.DataFrame, llm=None, time: dict | None = None, experiments: dict | None = None,
                  n_perm: int = 100, n_boot: int = 200, n_boot_scm: int = 30, narrate: bool = True, router=None, verifier=None):
         """experiments: {무작위 배정한 처치 변수: 실험 데이터}. 그 처치에 대한 질문에는 L4 실험 대조를 붙인다.
-        router(v1):   route.QueryRouter. 유형 키워드가 없는 질문의 유형을 Hume-Fast Rung 분류(저신뢰면 Hume-LM)로 정한다.
-        verifier(v1): Hume-LM 공급자(HFProvider). ate·ett·mediation 질문에 LM 독립 풀이와 엔진 부호 대조를 붙인다."""
+        router(v1):   route.QueryRouter. 유형 키워드가 없는 질문의 유형을 Humm-Fast Rung 분류(저신뢰면 Humm-LM)로 정한다.
+        verifier(v1): Humm-LM 공급자(HFProvider). ate·ett·mediation 질문에 LM 독립 풀이와 엔진 부호 대조를 붙인다."""
         self.hcg, self.df, self.llm, self.experiments = hcg, df, llm, experiments or {}
         self.n_boot, self.n_boot_scm, self.use_narrate = n_boot, n_boot_scm, narrate
         self.router, self.verifier = router, verifier

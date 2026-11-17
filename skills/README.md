@@ -1,6 +1,6 @@
-# Hume-Skills
+# Humm-Skills
 
-Hume 인과 도구(humm-mcp)를 에이전트가 올바른 순서와 원칙으로 쓰게 하는 Skill 모음이다.
+Humm 인과 도구(humm-mcp)를 에이전트가 올바른 순서와 원칙으로 쓰게 하는 Skill 모음이다.
 모든 Skill은 "가정 명시 → 그래프 확인 → 도구 호출 → 결과 해석 → 한계 고지" 골격을 따르고, 흄 원칙(상관만으로 인과를 단정하지 않는다, 숨은 교란을 항상 점검한다, 반사실은 가정 위에서만 말한다)을 체크리스트로 담는다.
 
 ## Skill 목록
@@ -31,7 +31,7 @@ pip install -e ".[mcp]"
 
 ```bash
 mkdir -p ~/.claude/skills
-ln -s "$PWD"/skills/hume-* ~/.claude/skills/        # 또는 cp -r skills/hume-* ~/.claude/skills/
+ln -s "$PWD"/skills/humm-* ~/.claude/skills/        # 또는 cp -r skills/humm-* ~/.claude/skills/
 ```
 
 3. MCP 서버를 등록한다(`humm/mcp/server.py` 설명과 같다). 서버 이름은 `humm`이어야 Skill 본문의 `humm.<도구>` 표기와 맞는다.
