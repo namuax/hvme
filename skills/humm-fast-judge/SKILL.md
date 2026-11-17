@@ -1,46 +1,46 @@
 ---
 name: humm-fast-judge
-description: 대량의 예/아니오·선택·척도 판단을 빠르게 처리할 때 쓴다. "이 엣지들 방향 맞는지 다 판단해줘", "보기 중 하나 골라줘", "1~5점으로 매겨줘" 같은 요청에 Humm-Fast(fast_noul·fast_choice·fast_score)를 부르고, 저신뢰 결과는 상위 경로로 올린다.
+description: Use to process many yes/no, multiple-choice, or scale judgments quickly. For requests like "judge whether all these edge directions are right", "pick one of these options", or "rate these 1 to 5" (Korean such as "1~5점으로 매겨줘" is supported), it calls Humm-Fast (fast_noul, fast_choice, fast_score) and escalates low-confidence results to a higher path.
 ---
 
-## 언제 쓰나
+## When to use
 
-- 쌍별 엣지 판정, 반사실 문장 검증, 질의 분류처럼 같은 형식의 판단이 많을 때 쓴다.
-- 수치 효과·반사실 계산이 필요한 질문에는 쓰지 않는다(그 경우 `humm-identify-estimate`·`humm-counterfactual`).
+- Use it when there are many judgments of the same form, such as pairwise edge judgments, counterfactual sentence checks, or query classification.
+- Do not use it for questions that need a numeric effect or a counterfactual computation (use `humm-identify-estimate` or `humm-counterfactual` for those).
 
-## 절차
+## Procedure
 
-1. 가정 명시: 판단할 명제·보기·척도의 뜻을 적고, `context`에 필요한 배경(그래프 요약·도메인)을 넣는다.
-2. 그래프 확인: 그래프에 관한 판단이면 `humm.graph_get(graph_id)`에서 관련 엣지·노드를 `context`로 옮긴다.
-3. 도구 호출을 고른다.
-   - 예/아니오: `humm.fast_noul(proposition, context="")`
-   - 선택: `humm.fast_choice(question, options=[...], context="")`
-   - 척도: `humm.fast_score(question, levels=5, context="")`
-4. 상향: `escalate`가 true인 결과는 쓰지 않는다. 수치 계산이 필요하면 `humm.ask`로, 그래프·데이터 위 판단이면 `humm.lm_verify(graph_id, csv, treatment, outcome)`로 올리고, 둘 다 안 되면 사용자에게 판단 불가로 알린다.
-5. 상향 비율을 집계해 사용자에게 함께 보고한다.
+1. State assumptions: write down the meaning of the proposition, options, or scale to be judged, and put the needed background (graph summary, domain) into `context`.
+2. Check the graph: for a judgment about the graph, copy the relevant edges and nodes from `humm.graph_get(graph_id)` into `context`.
+3. Choose the tool call.
+   - Yes/no: `humm.fast_noul(proposition, context="")`
+   - Choice: `humm.fast_choice(question, options=[...], context="")`
+   - Scale: `humm.fast_score(question, levels=5, context="")`
+4. Escalate: do not use results where `escalate` is true. If a numeric computation is needed, escalate to `humm.ask`; if it is a judgment over a graph and data, escalate to `humm.lm_verify(graph_id, csv, treatment, outcome)`; if neither works, tell the user the judgment cannot be made.
+5. Count the escalation rate and report it to the user along with the results.
 
-## 흄 원칙 체크리스트
+## Hume principles checklist
 
-- [ ] 상관만으로 인과를 단정하지 않는다.
-- [ ] 숨은 교란을 항상 점검한다.
-- [ ] 반사실은 가정 위에서만 말한다.
-- [ ] `escalate=true` 결과를 최종 답에 섞지 않는다.
-- [ ] Fast 판단은 데이터 검증 증거가 아니므로 엣지 상태를 `verified`로 올리는 근거로 쓰지 않는다.
+- [ ] Never assert causation from correlation alone.
+- [ ] Always check for hidden confounding.
+- [ ] State counterfactuals only on top of explicit assumptions.
+- [ ] Do not mix `escalate=true` results into the final answer.
+- [ ] A Fast judgment is not data-backed verification evidence, so never use it as grounds to raise an edge's status to `verified`.
 
-## 결과 해석
+## Interpreting results
 
-- `fast_noul`: `p_yes`(예일 확률), `confidence`, `escalate`이다.
-- `fast_choice`: `choice`(고른 보기), `probs`(보기별 확률), `confidence`, `escalate`이다.
-- `fast_score`: `score`(대표 점수), `dist`(점수별 확률), `confidence`, `escalate`이다.
-- `confidence`는 보정된 값이므로 확률처럼 읽되, 외부 분포 문항에서는 보정이 덜 맞을 수 있다.
+- `fast_noul`: `p_yes` (probability of yes), `confidence`, `escalate`.
+- `fast_choice`: `choice` (the chosen option), `probs` (probability per option), `confidence`, `escalate`.
+- `fast_score`: `score` (representative score), `dist` (probability per score), `confidence`, `escalate`.
+- `confidence` is a calibrated value, so read it like a probability, but calibration may be less accurate on out-of-distribution items.
 
-## 한계 고지
+## Limitations to disclose
 
-- Humm-Fast는 단일 패스 분류기이며 계산을 하지 않는다고 말한다.
-- 판단마다 `confidence`를 함께 보고하고, 상향한 문항 수를 밝힌다.
-- 학습 분포와 다른 문형(외부 셋)에서는 정확도가 수 pt 흔들릴 수 있다고 알린다.
+- Say that Humm-Fast is a single-pass classifier and does not compute anything.
+- Report `confidence` with every judgment, and state how many items were escalated.
+- Warn that accuracy can vary by a few points on sentence forms that differ from the training distribution (external sets).
 
-## 다른 Skill로 넘기기
+## Handing off to other Skills
 
-- 상향된 인과 질문 → `humm-causal-question` 또는 `humm-identify-estimate`
-- 엣지 판정을 그래프에 반영 → `humm-validate-dag`
+- Escalated causal questions → `humm-causal-question` or `humm-identify-estimate`
+- Reflecting edge judgments in the graph → `humm-validate-dag`

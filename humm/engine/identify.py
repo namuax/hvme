@@ -1,6 +1,6 @@
-"""인과 효과 식별: 백도어(일반화 조정 기준), 프론트도어, 도구변수(IV).
+"""Causal effect identification: backdoor (generalized adjustment criterion), frontdoor, instrumental variable (IV).
 
-latent 인자로 관측되지 않는 노드를 지정한다. 조정·매개·도구 집합에는 관측 노드만 쓴다.
+The latent argument names unobserved nodes. Adjustment, mediator and instrument sets use observed nodes only.
 """
 from dataclasses import dataclass, field
 from itertools import combinations
@@ -10,39 +10,39 @@ import networkx as nx
 from .dsep import as_set
 
 
-# ---------- 백도어: 일반화 조정 기준 (Shpitser et al. 2010; Perković et al. 2018) ----------
+# ---------- Backdoor: generalized adjustment criterion (Shpitser et al. 2010; Perković et al. 2018) ----------
 def causal_nodes(g: nx.DiGraph, x, y) -> set:
-    """x에서 y로 가는 인과 경로 위의 노드(x 제외, y 포함). 인과 경로가 없으면 빈 집합."""
+    """Nodes on causal paths from x to y (excluding x, including y). Empty if there is no causal path."""
     de = nx.descendants(g, x)
     return (de & nx.ancestors(g, y)) | {y} if y in de else set()
 
 
 def forbidden(g: nx.DiGraph, x, y) -> set:
-    """조정 집합에 들어가면 안 되는 노드: x와, 인과 경로 위 노드들의 자손."""
+    """Nodes that must not be in an adjustment set: x and the descendants of nodes on causal paths."""
     return {x}.union(*({w} | nx.descendants(g, w) for w in causal_nodes(g, x, y)))
 
 
 def proper_backdoor_graph(g: nx.DiGraph, x, y) -> nx.DiGraph:
-    """x에서 인과 경로의 첫 엣지를 지운 그래프."""
+    """The graph with the first edge of each causal path out of x removed."""
     h = g.copy()
     h.remove_edges_from([(x, w) for w in causal_nodes(g, x, y) if g.has_edge(x, w)])
     return h
 
 
 def is_valid_adjustment(g: nx.DiGraph, x, y, z) -> bool:
-    """z가 x → y 효과의 유효한 조정 집합인가."""
+    """Whether z is a valid adjustment set for the x → y effect."""
     z = as_set(z)
     return not (z & forbidden(g, x, y)) and nx.is_d_separator(proper_backdoor_graph(g, x, y), {x}, {y}, z)
 
 
 def optimal_adjustment(g: nx.DiGraph, x, y) -> set:
-    """O-set (Henckel, Perković & Maathuis 2022): 인과 경로 노드들의 부모 중 금지 노드를 뺀 집합. 분산이 가장 작은 조정 집합이다."""
+    """O-set (Henckel, Perković & Maathuis 2022): the parents of causal-path nodes minus forbidden nodes. This is the adjustment set with the smallest variance."""
     pa = set().union(*(set(g.predecessors(w)) for w in causal_nodes(g, x, y)))
     return pa - forbidden(g, x, y)
 
 
 def adjustment_sets(g: nx.DiGraph, x, y, latent=(), max_size: int = 4) -> list[set]:
-    """관측 노드로 만든 최소(minimal) 유효 조정 집합 목록. 작은 집합부터 찾는다."""
+    """List of minimal valid adjustment sets built from observed nodes, searched from smallest."""
     cand = sorted(set(g.nodes) - forbidden(g, x, y) - {y} - set(latent))
     found = []
     for k in range(max_size + 1):
@@ -52,10 +52,10 @@ def adjustment_sets(g: nx.DiGraph, x, y, latent=(), max_size: int = 4) -> list[s
     return found
 
 
-# ---------- 프론트도어 (Pearl 1995) ----------
+# ---------- Frontdoor (Pearl 1995) ----------
 def is_frontdoor(g: nx.DiGraph, x, y, m) -> bool:
-    """m이 프론트도어 기준을 만족하는가.
-    (i) m이 x → y 인과 경로를 모두 가로막고, (ii) x에서 m으로 열린 백도어 경로가 없고, (iii) m에서 y로 가는 백도어 경로가 x로 막힌다.
+    """Whether m satisfies the frontdoor criterion.
+    (i) m intercepts all causal paths x → y, (ii) there is no open backdoor path from x to m, and (iii) every backdoor path from m to y is blocked by x.
     """
     m = as_set(m)
     if m & {x, y}:
@@ -81,9 +81,9 @@ def frontdoor_sets(g: nx.DiGraph, x, y, latent=(), max_size: int = 3) -> list[se
     return found
 
 
-# ---------- 도구변수 ----------
+# ---------- Instrumental variable ----------
 def is_instrument(g: nx.DiGraph, x, y, z) -> bool:
-    """무조건부 도구변수: z가 x와 연결되고(관련성), x의 출력 엣지를 지운 그래프에서 z ⫫ y (배제·외생성)."""
+    """Unconditional instrument: z is connected to x (relevance), and z ⫫ y in the graph with x's outgoing edges removed (exclusion and exogeneity)."""
     if z in (x, y):
         return False
     no_x_out = g.copy()
@@ -96,7 +96,7 @@ def instruments(g: nx.DiGraph, x, y, latent=()) -> list[str]:
     return sorted(z for z in cand if is_instrument(g, x, y, z))
 
 
-# ---------- 통합 식별 ----------
+# ---------- Combined identification ----------
 @dataclass
 class Estimand:
     strategy: str  # backdoor | frontdoor | iv | no_effect | not_identified
@@ -114,7 +114,7 @@ def _fmt(s: set) -> str:
 
 
 def identify(g: nx.DiGraph, x, y, latent=()) -> Estimand:
-    """백도어 → 프론트도어 → IV 순으로 식별을 시도한다."""
+    """Try backdoor, then frontdoor, then IV."""
     latent = set(latent)
     if y not in nx.descendants(g, x):
         return Estimand("no_effect", x, y, expression=f"P({y}|do({x})) = P({y})")
@@ -130,11 +130,11 @@ def identify(g: nx.DiGraph, x, y, latent=()) -> Estimand:
         return Estimand("frontdoor", x, y, front[0], f"Σ_{{{m}}} P({m}|{x}) Σ_{{{x}'}} P({y}|{x}',{m}) P({x}')")
     ivs = instruments(g, x, y, latent)
     if ivs:
-        return Estimand("iv", x, y, {ivs[0]}, f"Cov({ivs[0]},{y}) / Cov({ivs[0]},{x})  (선형 모형 가정)")
-    return Estimand("not_identified", x, y, expression="관측 변수만으로 식별할 수 없다")
+        return Estimand("iv", x, y, {ivs[0]}, f"Cov({ivs[0]},{y}) / Cov({ivs[0]},{x})  (assumes a linear model)")
+    return Estimand("not_identified", x, y, expression="not identifiable from the observed variables")
 
 
-# ---------- 관측 안 된 교란이 있는 그래프의 완전한 식별 (Shpitser & Pearl 2006, ID 알고리즘의 판정만) ----------
+# ---------- Complete identification with unobserved confounding (Shpitser & Pearl 2006, ID algorithm decision only) ----------
 def _c_components(nodes: set, bi: set) -> list[set]:
     h = nx.Graph()
     h.add_nodes_from(nodes)
@@ -143,7 +143,7 @@ def _c_components(nodes: set, bi: set) -> list[set]:
 
 
 def id_identifiable(g: nx.DiGraph, bi, x, y) -> bool:
-    """P(y | do(x))가 식별되는가. g는 관측 변수의 방향 그래프, bi는 관측 안 된 교란을 나타내는 양방향 쌍 {frozenset({u, v}), ...}."""
+    """P(y | do(x))is identified. g is the directed graph over observed variables, bi the bidirected pairs representing unobserved confounding {frozenset({u, v}), ...}."""
     bi = {frozenset(e) for e in bi}
 
     def rec(ys: set, xs: set, nodes: set) -> bool:
@@ -163,7 +163,7 @@ def id_identifiable(g: nx.DiGraph, bi, x, y) -> bool:
             return all(rec(s, nodes - s, nodes) for s in cs)
         s, whole = cs[0], _c_components(nodes, bi)
         if whole == [nodes]:
-            return False  # 헤지
+            return False  # hedge
         if s in whole:
             return True
         big = next(c for c in whole if s < c)

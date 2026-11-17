@@ -1,9 +1,9 @@
-"""설정 문자열 → 공급자. MCP 서버·노트북이 같은 형식으로 LLM을 고른다.
+"""Config string -> provider. The MCP server and notebooks select the LLM with the same format.
 
-  hf:Qwen/Qwen3.5-9B@cuda:1        로컬 HF 모델 (장치 생략 시 cuda:0)
-  anthropic:claude-sonnet-5-5      Anthropic API (키는 ANTHROPIC_API_KEY 환경 변수)
-  replay:results/llm_cache/Qwen3.5-9B.json   기록된 응답 재생 (GPU 없이)
-cache 경로를 주면 응답을 기록한다(CachedProvider). replay는 기록하지 않는다.
+  hf:Qwen/Qwen3.5-9B@cuda:1        local HF model (cuda:0 if the device is omitted)
+  anthropic:claude-sonnet-5-5      Anthropic API (key from the ANTHROPIC_API_KEY environment variable)
+  replay:results/llm_cache/Qwen3.5-9B.json   replay recorded responses (no GPU)
+Giving a cache path records responses (CachedProvider). replay does not record.
 """
 from pathlib import Path
 
@@ -31,7 +31,7 @@ KINDS = {"hf": _hf, "anthropic": _anthropic, "replay": _replay}
 
 
 def from_spec(spec: str | None, cache: str | Path | None = None):
-    """spec이 비어 있으면 None(LLM 없이 규칙·데이터만 쓴다)."""
+    """None if spec is empty (rules and data only, no LLM)."""
     if not spec:
         return None
     kind, _, arg = spec.partition(":")

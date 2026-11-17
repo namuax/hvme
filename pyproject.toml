@@ -27,7 +27,7 @@ classifiers = [
 [project.optional-dependencies]
 bench = ["pgmpy>=1.0"]
 hf = ["torch>=2.7", "transformers>=5.2", "accelerate"]
-vllm = ["transformers>=5.2"]  # OpenAI 호환 서버(vLLM) 클라이언트, 토크나이저만 쓴다
+vllm = ["transformers>=5.2"]  # client for OpenAI-compatible servers (vLLM); only the tokenizer is loaded
 api = ["anthropic"]
 mcp = ["mcp>=1.2,<2"]
 causal = ["dowhy", "causal-learn", "econml"]

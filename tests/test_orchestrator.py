@@ -49,20 +49,20 @@ def test_demo_questions(orch, scenario):
     answers = [orch.ask(q) for q in QUESTIONS]
     v = [a.analysis.estimate for a in answers]
     assert abs(v[0]["ate"]["value"] - t["ate"]) < 0.04
-    assert v[1]["association"]["value"] > v[1]["ate"]["value"] + 0.05  # 성수기 교란으로 상관이 인과 효과보다 크다
+    assert v[1]["association"]["value"] > v[1]["ate"]["value"] + 0.05  # peak-season confounding makes the association exceed the causal effect
     assert abs(v[2]["nie"]["value"] - t["nie"]) < 0.04 and abs(v[2]["nde"]["value"] - t["nde"]) < 0.05
     assert abs(v[3]["ett"]["value"] - t["ett"]) < 0.04
     assert answers[4].analysis.estimand.strategy == "no_effect" and v[4]["ate"]["value"] == 0
-    assert v[5]["ate"]["ci"][1] < 0  # 할인은 만족도를 거쳐 이탈을 줄인다
+    assert v[5]["ate"]["ci"][1] < 0  # discounts reduce churn via satisfaction
     assert answers[0].analysis.experiment["consistent"]
     for a in answers:
         assert all(h in a.markdown for h in ("근거 경로", "그래프 민감도", "가정"))
         assert a.analysis.sensitivity_summary["scenarios"] >= 1 and a.analysis.assumptions
-    assert "not_identified" in set(answers[0].analysis.sensitivity.strategy)  # 숨은 교란을 넣으면 식별이 깨진다
+    assert "not_identified" in set(answers[0].analysis.sensitivity.strategy)  # adding hidden confounding breaks identification
 
 
 def test_parse_keeps_rule_variables():
-    """LLM이 방향을 뒤집어도 변수는 질문 문자열 기준을 따른다. 유형 키워드가 없을 때만 LLM 유형을 쓴다."""
+    """Even if the LLM flips the direction, variables follow the question string. The LLM's type is used only when no type keyword is present."""
     class Flip:
         name = "flip"
         def complete(self, prompts, max_new_tokens=256):
@@ -81,9 +81,9 @@ def test_check_narrative(orch):
     a = orch.ask(QUESTIONS[0]).analysis
     v = a.estimate["ate"]["value"]
     assert check_narrative(f"광고비를 늘리면 매출이 오른다. 효과는 {v:.3f}이다.", a) == []
-    assert check_narrative("효과는 0.999이다.", a)  # 근거에 없는 숫자
-    assert check_narrative(f"효과는 {v:.3f}입니다.", a)  # 합쇼체
-    assert check_narrative(f"ad_spend 효과는 {v:.3f}이다.", a)  # 내부 이름
+    assert check_narrative("효과는 0.999이다.", a)  # number absent from the evidence
+    assert check_narrative(f"효과는 {v:.3f}입니다.", a)  # formal polite register
+    assert check_narrative(f"ad_spend 효과는 {v:.3f}이다.", a)  # internal name
 
 
 def test_to_plain():

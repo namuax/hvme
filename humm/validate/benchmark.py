@@ -1,4 +1,4 @@
-"""L6 파이프라인 벤치마크: 참 그래프를 아는 bnlearn 네트워크에서 인과 탐색 결과를 SHD·SID·F1로 잰다."""
+"""L6 pipeline benchmark: score causal discovery results with SHD, SID and F1 on bnlearn networks whose true graph is known."""
 import time
 
 import networkx as nx
@@ -8,7 +8,7 @@ from ..bench.metrics import graph_report
 
 
 def sample_bnlearn(name: str, n: int, seed: int = 0) -> tuple[nx.DiGraph, pd.DataFrame]:
-    """bnlearn 네트워크의 참 그래프와 표본(범주를 정수 코드로 바꾼 표)."""
+    """True graph and sample (categories integer-coded) of a bnlearn network."""
     from pgmpy.example_models import load_model
 
     model = load_model(f"bnlearn/{name}")
@@ -17,7 +17,7 @@ def sample_bnlearn(name: str, n: int, seed: int = 0) -> tuple[nx.DiGraph, pd.Dat
 
 
 def benchmark(discover, names=("asia", "sachs", "insurance", "alarm"), n: int = 5000, seed: int = 0) -> pd.DataFrame:
-    """discover(df) -> nx.DiGraph 를 각 네트워크에 돌려 지표를 모은다. 파이프라인을 바꿀 때마다 회귀 테스트로 쓴다."""
+    """Run discover(df) -> nx.DiGraph on each network and collect metrics. Use as a regression test whenever the pipeline changes."""
     rows = []
     for name in names:
         true, df = sample_bnlearn(name, n, seed)

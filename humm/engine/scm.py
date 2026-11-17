@@ -1,9 +1,9 @@
-"""구조적 인과 모형(SCM). Humm-Gym 정답 계산과 엔진 검증에 쓴다.
+"""Structural causal model (SCM), used to compute Humm-Gym answers and validate the engine.
 
-- BinarySCM: 이진 변수, 문턱값 메커니즘 v = 1[u_v < p_v(pa)], u_v ~ U(0,1) 독립.
-  관측·개입·반사실 질의를 모두 같은 '외생 잡음 세계' 위에서 계산한다.
-  잡음 공간을 문턱값으로 나눈 칸(cell)이 max_cells 이하이면 정확 계산, 넘으면 몬테카를로로 근사한다.
-- LinearSCM: 선형 가우스 모형. 총효과는 (I - W)^-1 로 정확히 계산한다.
+- BinarySCM: binary variables, threshold mechanism v = 1[u_v < p_v(pa)], with independent u_v ~ U(0,1).
+  Observational, interventional and counterfactual queries are all computed over the same 'exogenous noise world'.
+  If the number of cells obtained by partitioning the noise space at the thresholds is at most max_cells, computation is exact; otherwise it is approximated by Monte Carlo.
+- LinearSCM: linear Gaussian model. Total effects are computed exactly via (I - W)^-1.
 """
 from dataclasses import dataclass, field
 from itertools import product
@@ -16,7 +16,7 @@ import pandas as pd
 @dataclass
 class BinarySCM:
     graph: nx.DiGraph
-    cpt: dict[str, np.ndarray]  # cpt[v][k] = P(v=1 | 부모 비트 k), 부모 i번째가 비트 i
+    cpt: dict[str, np.ndarray]  # cpt[v][k] = P(v=1 | parent bits k), the i-th parent is bit i
     max_cells: int = 200_000
     n_mc: int = 400_000
     seed: int = 0
@@ -25,7 +25,7 @@ class BinarySCM:
     def __post_init__(self):
         self.order = list(nx.topological_sort(self.graph))
         self.parents = {v: sorted(self.graph.predecessors(v)) for v in self.order}
-        self.noise()  # 정확 계산 여부(self.exact)를 생성 시점에 정한다
+        self.noise()  # decide exact vs. Monte Carlo (self.exact) at construction
 
     @classmethod
     def random(cls, g: nx.DiGraph, seed: int = 0, low: float = 0.1, high: float = 0.9, **kw) -> "BinarySCM":
@@ -35,8 +35,8 @@ class BinarySCM:
 
     @classmethod
     def fit(cls, g: nx.DiGraph, df: pd.DataFrame, alpha: float = 1.0, **kw) -> "BinarySCM":
-        """데이터로 확률표를 추정한다(라플라스 평활 alpha). 같은 그래프·확률표를 갖는 문턱값 SCM을 만들어 반사실을 계산한다.
-        관찰 분포와 개입 분포는 그래프만 맞으면 식별되지만, 반사실(PN·PS 등 세계 간 결합)은 문턱값 메커니즘(단조성) 가정에 기댄다."""
+        """Estimate the probability tables from data (Laplace smoothing alpha). Builds a threshold SCM with the same graph and tables to compute counterfactuals.
+        Observational and interventional distributions are identified if the graph is right, but counterfactuals (PN, PS and other cross-world quantities) rely on the threshold-mechanism (monotonicity) assumption."""
         cpt = {}
         for v in g.nodes:
             pa = sorted(g.predecessors(v))
@@ -45,9 +45,9 @@ class BinarySCM:
             cpt[v] = (k + alpha) / (n + 2 * alpha)
         return cls(g, cpt, **kw)
 
-    # ---------- 외생 잡음 세계 ----------
+    # ---------- Exogenous noise world ----------
     def noise(self) -> tuple[dict, np.ndarray]:
-        """(U, w): 노드별 잡음 표본과 가중치. 정확 모드에서는 칸 중심점과 칸 넓이, MC 모드에서는 균등 가중치."""
+        """(U, w): per-node noise samples and weights. Exact mode uses cell centers and cell widths; MC mode uses uniform weights."""
         if self._u is None:
             edges = {v: np.unique(np.r_[0.0, self.cpt[v], 1.0]) for v in self.order}
             n_cells = int(np.prod([len(e) - 1 for e in edges.values()]))
@@ -65,7 +65,7 @@ class BinarySCM:
         return self._u
 
     def world(self, do: dict | None = None, u: dict | None = None) -> dict[str, np.ndarray]:
-        """잡음 u에서 개입 do를 적용한 세계의 모든 변수 값. do 값은 상수 또는 (다른 세계에서 온) 배열이다."""
+        """All variable values in the world with intervention do applied to noise u. do values are constants or arrays (from another world)."""
         do = do or {}
         u = u or self.noise()[0]
         n = len(next(iter(u.values())))
@@ -94,32 +94,32 @@ class BinarySCM:
         return self.prob(y, {x: 1}) - self.prob(y, {x: 0})
 
     def cde(self, x: str, y: str, mediators: dict) -> float:
-        """통제 직접효과: 매개변수를 고정값으로 묶은 상태에서의 x 효과."""
+        """Controlled direct effect: the effect of x with the mediators held at fixed values."""
         return self.prob(y, {x: 1, **mediators}) - self.prob(y, {x: 0, **mediators})
 
-    # ---------- Rung 3: 반사실 (같은 잡음을 공유하는 세계들) ----------
+    # ---------- Rung 3: counterfactuals (worlds sharing the same noise) ----------
     def ett(self, x: str, y: str) -> float:
-        """처치군 효과 E[Y_{x=1} - Y_{x=0} | X=1]."""
+        """Effect on the treated E[Y_{x=1} - Y_{x=0} | X=1]."""
         f = self.world()
         return self._mean(self.world({x: 1})[y] - self.world({x: 0})[y], f[x] == 1)
 
     def nde(self, x: str, y: str, mediators: list[str]) -> float:
-        """자연 직접효과 E[Y(x=1, M(x=0))] - E[Y(x=0)]."""
+        """Natural direct effect E[Y(x=1, M(x=0))] - E[Y(x=0)]."""
         m0 = self.world({x: 0})
         return self._mean(self.world({x: 1, **{m: m0[m] for m in mediators}})[y] - m0[y])
 
     def nie(self, x: str, y: str, mediators: list[str]) -> float:
-        """자연 간접효과 E[Y(x=0, M(x=1))] - E[Y(x=0)]."""
+        """Natural indirect effect E[Y(x=0, M(x=1))] - E[Y(x=0)]."""
         m0, m1 = self.world({x: 0}), self.world({x: 1})
         return self._mean(self.world({x: 0, **{m: m1[m] for m in mediators}})[y] - m0[y])
 
     def pn(self, x: str, y: str) -> float:
-        """필요 확률 P(Y_{x=0}=0 | X=1, Y=1)."""
+        """Probability of necessity P(Y_{x=0}=0 | X=1, Y=1)."""
         f = self.world()
         return self._mean(self.world({x: 0})[y] == 0, (f[x] == 1) & (f[y] == 1))
 
     def ps(self, x: str, y: str) -> float:
-        """충분 확률 P(Y_{x=1}=1 | X=0, Y=0)."""
+        """Probability of sufficiency P(Y_{x=1}=1 | X=0, Y=0)."""
         f = self.world()
         return self._mean(self.world({x: 1})[y] == 1, (f[x] == 0) & (f[y] == 0))
 
@@ -147,7 +147,7 @@ class LinearSCM:
         return w
 
     def total_effect(self, x: str, y: str) -> float:
-        """y의 x에 대한 총효과 = 모든 인과 경로 계수 곱의 합 = (I - W)^-1 [x, y]."""
+        """Total effect of x on y = sum over all causal paths of the product of coefficients = (I - W)^-1 [x, y]."""
         t = np.linalg.inv(np.eye(len(self.order)) - self.matrix())
         return float(t[self.index[x], self.index[y]])
 

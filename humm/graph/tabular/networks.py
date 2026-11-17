@@ -1,4 +1,4 @@
-"""bnlearn 벤치마크 네트워크의 도메인과 변수 설명(LLM 사전지식 질의용)."""
+"""Domains and variable descriptions of bnlearn benchmark networks (for LLM prior queries)."""
 
 NETWORKS = {
     "asia": {
@@ -15,7 +15,7 @@ NETWORKS = {
     },
     "insurance": {"domain": "car insurance risk assessment (driver, vehicle, accident and claim costs)", "descriptions": {}},
     "alarm": {"domain": "patient monitoring in anesthesia and intensive care (the ALARM monitoring network)", "descriptions": {}},
-    # 보류(held-out) 검증용: 혼합 모드 기준값을 고를 때 쓰지 않은 네트워크
+    # Held-out for validation: networks not used when choosing hybrid-mode thresholds
     "child": {"domain": "diagnosis of congenital heart disease in newborn babies (the CHILD network)", "descriptions": {}},
     "hepar2": {"domain": "diagnosis of liver disorders from risk factors, symptoms and lab tests (the HEPAR II network)", "descriptions": {}},
     "win95pts": {"domain": "troubleshooting printing problems in Windows 95 (the WIN95PTS network)", "descriptions": {}},

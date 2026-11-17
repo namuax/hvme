@@ -1,13 +1,13 @@
-"""Humm-Gym v3.7 (SFT v2.12): 값을 JSON으로 묻는 수치 질의(kind "prob").
+"""Humm-Gym: numeric queries asking for a value as JSON (kind "prob").
 
-4B 평가표(reports/2026-11-06_humm_lm_eval_table.md)에서 CaLM·CauGym의 수치 과제는 예/아니오와 함께 값 자체(PROB)를 채점했다.
-v2.11은 거기서 셋을 잃었다.
-- ETT 값의 정의가 교과서(실제 − 반사실)라 엔진 value(반사실 − 실제)와 부호가 반대다. 엔진 결과의 'ETT =' 줄을 옮겨 쓴다.
-- PN·PS(Tian–Pearl 상·하한)가 엔진에 없었다. 엔진 질의 pn·ps와 bound를 쓴다.
-- 처치에서 결과로 가는 경로가 없거나 직접 엣지뿐인 문항은 확률 없이 값이 0이다. 확률 목록을 비우고 매개 집합도 비워 엔진이 경로에서 찾게 한다.
+In CaLM and CauGym, numeric tasks grade the value itself (PROB) along with yes/no.
+Earlier models lost points on three of these:
+- The textbook ETT is (actual - counterfactual), opposite in sign to the engine value (counterfactual - actual). Copy the 'ETT =' line from the engine result.
+- The engine lacked PN and PS (Tian-Pearl bounds). Use the engine queries pn, ps and bound.
+- Items with no path from treatment to outcome, or only a direct edge, have value 0 without probabilities. Leave the probability list and mediator set empty so the engine finds them from the paths.
 
-문맥은 그 벤치들처럼 엣지마다 한 문장, 확률은 소수 넷째 자리다. 질문 문형은 유형마다 둘이고, 하나는 벤치의 문형을, 하나는 다르게 쓴 문형이다.
-벤치 문항 자체는 쓰지 않는다. 정답 값은 문맥과 같은 숫자로 만든 엔진 호출(meta.call)의 값이고, 참 확률표의 값과 0.01 안일 때만 문항으로 쓴다.
+As in those benchmarks, the context has one sentence per edge and probabilities have four decimals. Each type has two question templates: one follows the benchmark, one is worded differently.
+Benchmark items themselves are not used. The answer is the value of an engine call (meta.call) built from the same numbers as the context, and an item is kept only if it is within 0.01 of the value from the true probability table.
 """
 import json
 
@@ -22,7 +22,7 @@ from .v3 import GENERATORS_36, Bare, bare_lex, cpt_statements, observed
 from .verbalize import PREAMBLE, Lexicon
 
 TYPES = ("ate", "cde", "ett", "nde", "nie", "pn", "ps")
-ZERO = 0.3  # ate·ett·nde·nie 중 경로가 없어 값이 0인 문항(확률 없음) 비율
+ZERO = 0.3  # fraction of ate/ett/nde/nie items with value 0 because no path exists (no probabilities)
 FULL = {"ate": "average treatment effect", "cde": "controlled direct effect", "ett": "effect of treatment on the treated", "nde": "natural direct effect",
         "nie": "natural indirect effect", "pn": "probability of necessity", "ps": "probability of sufficiency"}
 RUNG = {"ate": 2, "cde": 2, "ett": 3, "nde": 3, "nie": 3, "pn": 3, "ps": 3}
@@ -55,7 +55,7 @@ FORMATS = {True: ['Provide the calculation result to four decimal places and a f
 
 
 def _zero_ok(qtype, g, x, y) -> bool:
-    """경로 구조만으로 값이 0인가: ate·ett는 x → y 경로 없음, nde는 직접 엣지 없음, nie는 매개 경로 없음."""
+    """Is the value 0 from path structure alone: ate and ett have no x -> y path, nde has no direct edge, nie has no mediated path."""
     med = nx.descendants(g, x) & nx.ancestors(g, y)
     return {"ate": y not in nx.descendants(g, x), "ett": y not in nx.descendants(g, x), "nde": not g.has_edge(x, y), "nie": not med}[qtype]
 
@@ -74,7 +74,7 @@ def _setup(qtype, rng, zero: bool):
 
 
 def _statements(qtype, g, x, y, med, t, o, bound):
-    """문맥 확률(대상, 조건). 처치 부모가 하나 이하이면 필요한 것만(백도어는 부모), 아니면 전체 확률표."""
+    """Context probabilities (target, condition). With at most one treatment parent, only the needed ones (back-door uses the parent); otherwise the full probability table."""
     z = sorted(g.predecessors(x))
     yx = [({y: o}, {x: a, **dict(zip(z, bits))}) for a in (1, 0) for bits in np.ndindex(*(2,) * len(z))]
     if qtype in ("ate", "pn", "ps") and len(z) <= 1:
@@ -87,7 +87,7 @@ def _statements(qtype, g, x, y, med, t, o, bound):
 
 
 def _joint(x, y, t, o):
-    """PN·PS 상·하한에 드는 관측 확률 P(y), P(x, y), P(x', y')."""
+    """Observed probabilities P(y), P(x, y), P(x', y') entering the PN and PS bounds."""
     return [({y: o}, {}), ({x: t, y: o}, {}), ({x: 1 - t, y: 1 - o}, {})]
 
 
@@ -102,7 +102,7 @@ def sentence(lex, target: dict, given: dict, p: float) -> str:
 
 
 def answer_json(qtype: str, val: float) -> dict:
-    """정답 JSON. ETT의 PROB는 실제 − 반사실(엔진 value의 반대 부호), 예/아니오는 value > 0이다."""
+    """Answer JSON. For ETT, PROB is actual - counterfactual (opposite sign of the engine value); yes/no is value > 0."""
     prob = -val if qtype == "ett" else val
     out = {"PROB": f"{round(prob, 4) + 0.0:.4f}"}
     return out if qtype in ("pn", "ps") else {"ANSWER": "Yes" if round(val, 4) > 0 else "No"} | out
@@ -127,7 +127,7 @@ def gen_prob(qtype, rng, lang, domain):
     else:
         return None
     lex = bare_lex(g, rng) if rng.random() < 0.5 else _lex(g, rng, lang, domain)
-    if isinstance(lex, Bare):  # 무의미 이름의 상태는 high/low(벤치 표기)
+    if isinstance(lex, Bare):  # states of meaningless names are high/low (benchmark notation)
         lex = Lexicon({v: w[:4] + ("high", "low") for v, w in lex.vocab.items()}, "en")
     stmts = [] if zero else _statements(qtype, g, x, y, med, t, o, bound) or cpt_statements(scm) + (_joint(x, y, t, o) if qtype in ("pn", "ps") else [])
     st = lambda a: {lex.name(v): lex.state(v, s) for v, s in a.items()}
@@ -158,7 +158,7 @@ def gen_prob(qtype, rng, lang, domain):
 
 
 def recompute(d: dict) -> int:
-    """저장한 호출을 다시 돌려 정답을 맞춘다. 값이 저장한 PROB와 다르면 -9."""
+    """Re-run the stored call to confirm the answer. Returns -9 if the value differs from the stored PROB."""
     ans = answer_json(d["query_type"], run(d["meta"]["call"])[0])
     return (int(ans["ANSWER"] == "Yes") if "ANSWER" in ans else -1) if ans == d["meta"]["answer"] else -9
 

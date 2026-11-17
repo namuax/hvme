@@ -22,7 +22,7 @@ def test_josa():
 
 
 def test_markov_equivalence_counts():
-    # 알려진 값: 노드 3개 DAG 25개·동치류 11개, 노드 4개 DAG 543개·동치류 185개
+    # known values: 3 nodes have 25 DAGs and 11 equivalence classes, 4 nodes have 543 DAGs and 185 classes
     assert (len(all_dags(3)), len(mec_index(3)), len(all_dags(4)), len(mec_index(4))) == (25, 11, 543, 185)
 
 

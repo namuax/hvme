@@ -1,7 +1,7 @@
-"""가상 LLM: 참 그래프를 알고 있지만 일부러 틀리는 공급자. LLM 사전지식의 품질이 결과에 주는 영향을 GPU 없이 실험한다.
+"""Simulated LLM: a provider that knows the true graph but is deliberately wrong at a given rate. Lets you study how LLM prior quality affects results without a GPU.
 
-- 순서 질의: 참 위상 순서에서 error × 변수 수 만큼 무작위로 두 변수의 자리를 바꿔 답한다.
-- 쌍별 질의: 참 방향(조상 관계)을 확률 1 - error 로 맞히고, confidence 만큼의 확률을 준다.
+- Order query: swaps the positions of two random variables in the true topological order, error x n_variables times, and answers with that.
+- Pairwise query: gets the true direction (ancestor relation) right with probability 1 - error, and returns `confidence` as the probability.
 """
 import json
 import re

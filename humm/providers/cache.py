@@ -1,4 +1,4 @@
-"""LLM 응답 기록·재생. GPU에서 한 번 기록하면 Mac에서 같은 프롬프트를 GPU 없이 재생해 실험(임계값 조정 등)을 반복할 수 있다."""
+"""LLM response record/replay. Record once on a GPU, then replay the same prompts without a GPU to repeat experiments (threshold tuning, etc.)."""
 import hashlib
 import json
 from pathlib import Path
@@ -9,7 +9,7 @@ def _key(kind: str, prompt: str, extra) -> str:
 
 
 class CachedProvider:
-    """다른 공급자를 감싸 응답을 기록한다. 같은 프롬프트를 다시 받으면 기록에서 돌려준다. save()로 JSON에 저장한다."""
+    """Wraps another provider and records its responses. A repeated prompt is answered from the record. save() writes it to JSON."""
 
     def __init__(self, provider, path: str | Path):
         self.inner, self.path = provider, Path(path)
@@ -36,7 +36,7 @@ class CachedProvider:
 
 
 class ReplayProvider:
-    """기록된 응답만 돌려준다. 기록에 없는 프롬프트가 오면 KeyError를 낸다(새 GPU 실행이 필요하다는 뜻)."""
+    """Returns recorded responses only. A prompt missing from the record raises KeyError (a new GPU run is needed)."""
 
     def __init__(self, path: str | Path, name: str | None = None, supports_logits: bool = True):
         self.store = json.loads(Path(path).read_text())

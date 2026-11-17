@@ -1,4 +1,4 @@
-"""그래프와 확률표를 한국어·영어 문장으로 바꾼다."""
+"""Render graphs and probability tables as Korean or English sentences."""
 from dataclasses import dataclass
 
 import networkx as nx
@@ -7,17 +7,17 @@ from ..engine.scm import BinarySCM
 
 
 def _batchim(word: str) -> int:
-    """마지막 글자의 받침: 0 없음, 1 있음, 2 ㄹ받침. 한글이 아니면 0으로 본다."""
+    """Final-syllable coda: 0 none, 1 present, 2 rieul coda. Non-Hangul is treated as 0."""
     ch = word[-1]
     code = ord(ch) - 0xAC00
-    if not 0 <= code < 11172:  # 영문 대문자는 읽는 소리 기준: L·R(엘·알)은 ㄹ받침, M·N(엠·엔)은 받침 있음
+    if not 0 <= code < 11172:  # Uppercase Latin letters follow their Korean pronunciation: L, R end in a rieul coda; M, N have a coda
         return {"L": 2, "R": 2, "M": 1, "N": 1}.get(ch, 0)
     jong = code % 28
     return 2 if jong == 8 else int(jong > 0)
 
 
 def josa(word: str, kind: str) -> str:
-    """kind: '은', '이', '을', '과', '로' 중 하나. 받침에 맞는 조사를 붙인다."""
+    """kind: one of '은', '이', '을', '과', '로'. Attach the particle matching the final coda."""
     b = _batchim(word)
     table = {"은": ("는", "은", "은"), "이": ("가", "이", "이"), "을": ("를", "을", "을"), "과": ("와", "과", "과"), "로": ("로", "으로", "로")}
     return word + table[kind][b]
@@ -31,7 +31,7 @@ PREAMBLE = {
 
 @dataclass
 class Lexicon:
-    """그래프 노드 → 변수 어휘 대응과 문장 조각."""
+    """Mapping from graph nodes to variable vocabulary, plus sentence fragments."""
     vocab: dict  # node -> (ko_name, ko_on, ko_off, en_name, en_on, en_off)
     lang: str
 
@@ -67,7 +67,7 @@ def describe_graph(g: nx.DiGraph, lex: Lexicon, latent=()) -> list[str]:
 
 
 def describe_cpt(scm: BinarySCM, lex: Lexicon) -> list[str]:
-    """각 변수의 조건부 확률표를 문장으로 쓴다. 정답 계산에 필요한 정보가 모두 들어간다."""
+    """Write each variable's conditional probability table as sentences, including everything needed to compute the answer."""
     lines = []
     for v in scm.order:
         pa = scm.parents[v]

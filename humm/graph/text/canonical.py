@@ -1,4 +1,4 @@
-"""T5 정규화: 같은 변수를 가리키는 여러 표현을 하나의 정규 이름으로 묶는다."""
+"""T5 canonicalization: group multiple expressions of the same variable under one canonical name."""
 import json
 import re
 
@@ -19,7 +19,7 @@ def norm(p: str) -> str:
 
 
 def parse_groups(raw: str, phrases: list[str]) -> dict:
-    """phrase → 정규 이름. 응답에 없는 표현은 자기 자신을 이름으로 쓴다. 같은 이름의 그룹은 합친다."""
+    """phrase -> canonical name. A phrase missing from the response is its own name. Groups with the same name are merged."""
     blocks = JSON_BLOCK.findall(raw) or JSON_ANY.findall(raw)
     groups = json.loads(blocks[-1]).get("groups", []) if blocks else []
     by_norm = {norm(p): p for p in phrases}
@@ -34,8 +34,8 @@ def parse_groups(raw: str, phrases: list[str]) -> dict:
 
 
 def canonicalize(provider, phrases: list[str], domain: str, max_new_tokens: int = 2048) -> tuple[dict, str]:
-    """표기만 다른 표현(대소문자·공백·기호)은 먼저 합치고, 나머지는 LLM이 묶는다."""
-    uniq = sorted(set(phrases), key=lambda p: (norm(p), p))  # 표기 변형 중 대표를 항상 같게 고른다(실행마다 같은 프롬프트)
+    """Expressions that differ only in notation (case, whitespace, symbols) are merged first; the LLM groups the rest."""
+    uniq = sorted(set(phrases), key=lambda p: (norm(p), p))  # always pick the same representative among notation variants (same prompt on every run)
     first = {}
     for p in uniq:
         first.setdefault(norm(p), p)

@@ -2,10 +2,10 @@ from typing import Protocol
 
 
 class Provider(Protocol):
-    """Humm 전체가 의존하는 LLM 인터페이스.
+    """LLM interface that all of Humm depends on.
 
-    - complete: 프롬프트 목록 → 생성 텍스트 목록 (CoT·생성형 평가, 그래프 추출)
-    - option_probs: 프롬프트 목록 × 보기 라벨 → 보기별 확률 목록 (Noul·Choice·Score, Humm-Fast)
+    - complete: list of prompts -> list of generated texts (CoT, generative evaluation, graph extraction)
+    - option_probs: list of prompts x option labels -> per-option probabilities (Noul/Choice/Score, Humm-Fast)
     """
 
     name: str

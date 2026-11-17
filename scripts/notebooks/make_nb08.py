@@ -2,21 +2,21 @@ import sys
 import nbformat as nbf
 
 cells = [
-"""md:# 08. 얇은 엔드투엔드 — MCP 도구 + 오케스트레이터 v0
+"""md:# 08. Thin end-to-end — MCP tools + orchestrator v0
 
-지금까지 만든 그래프 구축·검증·인과 엔진을 질문 하나의 흐름으로 잇는다(`05_development_guide.md` Step 7).
+This notebook connects the graph construction, validation and causal engine built so far into a single question-to-answer flow.
 
-| 단계 | 내용 | 모듈 |
+| Stage | What it does | Module |
 |---|---|---|
-| 질의 분석 | 질문 → 유형(ATE·상관 대 인과·매개·ETT)·처치·결과·매개 변수. 규칙 기반, 범용 LLM이 있으면 JSON 질의 | `orchestrator.query` |
-| 그래프 확보 | 정형 데이터 → HCG, 문서 → HCG, 병합 | `orchestrator.acquire` |
-| 검증 | L1 구조·L2 데이터 반증, (실험 데이터가 있으면) L4 실험 대조 | `validate_hcg`, `experiment_check` |
-| 식별·추정 | 백도어 → 프론트도어 → IV, 부트스트랩 구간. Rung 3은 데이터로 적합한 이진 SCM | `engine`, `BinarySCM.fit` |
-| 반박 | 위약 처치·무작위 공통 원인·부분 표본 | `refute` |
-| 그래프 민감도(L5) | 엣지 하나씩 지우기·뒤집기·반증 엣지 복원·숨은 교란 추가 → 결론이 바뀌는가 | `orchestrator.sensitivity` |
-| 설명 | 답·근거 경로(엣지 상태·증거·인용문)·가정 목록. LLM은 요약 문단만 쓴다 | `orchestrator.explain` |
+| Query analysis | Question → type (ATE, correlation vs. causation, mediation, ETT), treatment, outcome and mediator variables. Rule-based; a general-purpose LLM, if available, produces a JSON query | `orchestrator.query` |
+| Graph acquisition | Tabular data → HCG, documents → HCG, merge | `orchestrator.acquire` |
+| Validation | L1 structure and L2 data falsification, plus L4 experiment comparison when experimental data exists | `validate_hcg`, `experiment_check` |
+| Identification and estimation | Backdoor → frontdoor → IV, bootstrap intervals. Rung 3 uses a binary SCM fitted to the data | `engine`, `BinarySCM.fit` |
+| Refutation | Placebo treatment, random common cause, data subset | `refute` |
+| Graph sensitivity (L5) | Delete or flip each edge, restore falsified edges, add a hidden confounder → does the conclusion change? | `orchestrator.sensitivity` |
+| Explanation | Answer, evidence paths (edge status, evidence, quotes) and list of assumptions. The LLM only writes the summary paragraph | `orchestrator.explain` |
 
-같은 기능을 `humm.api`(경로 기반 함수)와 `humm.mcp`(MCP 서버)로 노출한다. 1~3장과 5·6장은 CPU, 4장은 GPU에서 실행한다.""",
+The same functionality is exposed as `humm.api` (path-based functions) and `humm.mcp` (MCP server). Sections 1-3, 5 and 6 run on CPU; section 4 needs a GPU.""",
 """import pandas as pd
 from IPython.display import Markdown, display
 
@@ -29,39 +29,39 @@ pd.set_option("display.max_colwidth", 60)
 s = marketing()
 files = s.save(DATA / "demo" / "marketing")
 files""",
-"""md:## 1. 데모 시나리오 (마케팅)
+"""md:## 1. Demo scenario (marketing)
 
-정답 SCM에서 관찰 데이터 8,000행, 광고비를 무작위 배정한 A/B 테스트 3,000행, 문서 12개를 만든다. 성수기가 광고비·할인·매출을 함께 움직이는 **교란 변수**이고, 광고비 효과의 일부는 **웹 방문을 거친다**. 질문 6개의 정답은 정답 SCM에서 정확히 계산한다.""",
-"""print("정답 엣지:", [(a, b, d["sign"]) for a, b, d in s.graph.edges(data=True)])
-print("질문:", *QUESTIONS, sep="\\n- ")
+From a ground-truth SCM, generate 8,000 rows of observational data, 3,000 rows of an A/B test with randomly assigned ad spend, and 12 documents. Peak season is a **confounder** that moves ad spend, discounts and sales together, and part of the ad-spend effect **goes through web visits**. The answers to the 6 questions are computed exactly from the ground-truth SCM.""",
+"""print("Ground-truth edges:", [(a, b, d["sign"]) for a, b, d in s.graph.edges(data=True)])
+print("Questions:", *QUESTIONS, sep="\\n- ")
 pd.Series(s.truth()).round(4)""",
-"""md:## 2. (CPU) 가상 LLM으로 끝까지
+"""md:## 2. (CPU) End to end with a simulated LLM
 
-텍스트 추출은 가상 LLM(오류율 0.1)이 맡고, 질의 분석과 설명은 규칙·템플릿만 쓴다. 그래프 확보 → 검증은 한 번 하고, 질문마다 식별 → 추정 → 반박 → 민감도 → 설명을 돈다.""",
+Text extraction is done by a simulated LLM (error rate 0.1); query analysis and explanation use only rules and templates. Graph acquisition and validation run once, then each question goes through identification → estimation → refutation → sensitivity → explanation.""",
 """orch = Orchestrator.from_sources(s.data, s.corpus.docs, "marketing", TextOracle(s.corpus, error=0.1), s.column_aliases, "marketing-demo",
                                  experiments={"ad_spend": s.experiment})
-print("검증 판정:", orch.report.verdict, "| 정답 엣지와 같은가:", {e.key for e in orch.hcg.active_edges()} == set(s.graph.edges))
+print("Validation verdict:", orch.report.verdict, "| matches ground-truth edges:", {e.key for e in orch.hcg.active_edges()} == set(s.graph.edges))
 orch.changes""",
 """answers = [orch.ask(q) for q in QUESTIONS]
 card = scorecard(answers, s)
 card""",
-"""md:`parsed_ok`는 질문 해석이 기대(유형·처치·결과)와 같은지, `covered`는 정답이 95% 구간 안에 있는지이다. `alternatives`는 민감도 분석의 대안 그래프 수, `flipped`·`vanished`는 결론의 부호가 뒤집히거나 효과가 0이 된 대안 수이다.
+"""md:`parsed_ok` says whether the question was interpreted as expected (type, treatment, outcome), and `covered` says whether the true value lies within the 95% interval. `alternatives` is the number of alternative graphs in the sensitivity analysis; `flipped` and `vanished` are the numbers of alternatives in which the sign of the conclusion flips or the effect becomes zero.
 
-## 3. 답변 전체
+## 3. Full answers
 
-질문마다 답·근거 경로·반박·그래프 민감도·가정이 자동으로 나온다(완료 기준).""",
+For each question, the answer, evidence paths, refutations, graph sensitivity and assumptions are produced automatically.""",
 """for a in answers:
     display(Markdown(a.markdown + "\\n\\n---"))""",
-"""md:## 4. (GPU) Qwen3.5로 그래프 구축 + 질의 분석 + 설명
+"""md:## 4. (GPU) Graph construction + query analysis + explanation with Qwen3.5
 
-같은 흐름에서 가상 LLM 자리를 실제 모델로 바꾼다. 모델 하나가 텍스트 추출·정규화·반사실 검증(그래프 확보), 질의 분석, 설명 요약 문단을 모두 맡는다. 응답은 `results/llm_cache/`에 기록되므로 Mac에서 재생할 수 있다.
+In the same flow, replace the simulated LLM with a real model. A single model handles text extraction, normalization and counterfactual verification (graph acquisition), query analysis, and the summary paragraph of the explanation. Responses are recorded to `results/llm_cache/`, so they can be replayed without a GPU.
 
-- 질의 분석: 변수는 질문 문자열에서 찾은 표현(규칙)으로 정하고, LLM은 변수를 못 찾았을 때와 유형 키워드가 없을 때만 쓴다.
-- 요약 문단: 근거에 없는 숫자·'~다'로 끝나지 않는 문장·내부 이름(변수 id, `_U`)이 있으면 답에 싣지 않는다(`narrative_ok`). 원문과 검사 결과는 `results/e2e/<모델>_narratives.json`에 남긴다.
+- Query analysis: variables are determined by expressions found in the question string (rules); the LLM is used only when no variable is found or the question has no type keyword.
+- Summary paragraph: a paragraph with numbers not in the evidence, sentences not in the plain "~다" register, or internal names (variable ids, `_U`) is not included in the answer (`narrative_ok`). The raw text and check results are saved to `results/e2e/<model>_narratives.json`.
 
-> 1차 실행(2026-10-25): 두 모델 모두 그래프를 정확히 복원했고(정답 엣지 10개, 판정 pass) 수치는 가상 LLM 결과와 같았다. 다만 LLM 질의 분석은 '고객 이탈률이 광고비에 영향을 주는가'의 방향을 두 모델 모두 뒤집었고(4B는 ETT도 ATE로 분류), 요약 문단 12개 중 11개가 합쇼체·내부 이름·근거에 없는 숫자 문제로 검사를 통과하지 못했다. 위 두 규칙은 이 결과로 정했다.
+> Observed results: both models recovered the graph exactly (10 ground-truth edges, verdict pass), and the numbers matched the simulated-LLM run. However, in LLM query analysis both models flipped the direction of "Does ad spend affect customer churn?" (the 4B model also classified an ETT question as ATE), and 11 of 12 summary paragraphs failed the check because of formal-register endings, internal names or numbers not in the evidence. The two rules above were set from this result.
 >
-> 2차 실행(2026-10-25): 질의 해석은 두 모델 모두 6/6이 되었다. 요약은 방향·내부 이름 문제가 사라졌지만, 지시해도 대부분 합쇼체로 써서 검사 통과가 4B 1/6, 9B 0/6이었다. 합쇼체를 '~다'체로 바꾸는 후처리(`explain.to_plain`)를 넣어 같은 기록을 재생하면 4B 5/6, 9B 6/6이다(`reports/2026-10-25_e2e.md` 5장).""",
+> After the prompt fixes, query interpretation is 6/6 for both models. Direction and internal-name problems disappeared from the summaries, but the models mostly wrote in the formal register despite instructions, so the check passed 1/6 for 4B and 0/6 for 9B. With a post-processing step that converts the formal register to the plain "~다" register (`explain.to_plain`), replaying the same recordings gives 5/6 for 4B and 6/6 for 9B.""",
 """gpu:import gc
 import json
 
@@ -100,9 +100,9 @@ e2e.groupby("model").agg(parsed_ok=("parsed_ok", "mean"), narrative_ok=("narrati
 """gpu:pd.DataFrame([{"model": m, **d} for m in ("Qwen3.5-4B", "Qwen3.5-9B")
               for d in json.loads((RESULTS / "e2e" / f"{m}_narratives.json").read_text(encoding="utf-8"))])""",
 """gpu:display(Markdown((RESULTS / "e2e" / "Qwen3.5-9B.md").read_text(encoding="utf-8").split("\\n\\n---\\n\\n")[2]))""",
-"""md:## 5. (CPU) 기록 재생
+"""md:## 5. (CPU) Replaying recorded responses
 
-GPU에서 기록한 9B 응답을 재생해 4장과 같은 결과가 나오는지 확인한다. GPU 실행 전에는 기록이 없어 `KeyError`가 난다.""",
+Replay the 9B responses recorded on the GPU and check that the result matches section 4. Before the GPU run there is no recording, so this raises a `KeyError`.""",
 """replay:from humm.providers.cache import ReplayProvider
 
 rp = ReplayProvider(RESULTS / "llm_cache" / "Qwen3.5-9B.json", name="Qwen3.5-9B")
@@ -110,48 +110,47 @@ o = Orchestrator.from_sources(s.data, s.corpus.docs, "marketing", rp, s.column_a
                               experiments={"ad_spend": s.experiment})
 replayed = scorecard([o.ask(q) for q in QUESTIONS], s)
 gpu = pd.read_csv(RESULTS / "e2e_qwen35.csv").query("model == 'Qwen3.5-9B'").reset_index(drop=True)
-print("수치가 GPU 결과와 같은가:", (replayed.value.round(4).values == gpu.value.round(4).values).all())
-print("요약 검사 통과 — GPU 기록:", int(gpu.narrative_ok.sum()), "/ 재생:", int(replayed.narrative_ok.sum()))  # 문체 정리 등 후처리를 바꾸면 재생 쪽만 달라진다
+print("Values match the GPU run:", (replayed.value.round(4).values == gpu.value.round(4).values).all())
+print("Summary check passed - GPU recording:", int(gpu.narrative_ok.sum()), "/ replay:", int(replayed.narrative_ok.sum()))  # changing post-processing such as register cleanup affects only the replay side
 replayed""",
-"""md:## 6. MCP 서버
+"""md:## 6. MCP server
 
-`humm.mcp`는 `humm.api` 함수를 MCP 도구로 노출한다. Claude Desktop·Claude Code에 아래처럼 등록하면, 에이전트가 도구를 불러 그래프를 만들고 질문에 답한다(`pip install -e ".[mcp]"`).
+`humm.mcp` exposes the `humm.api` functions as MCP tools. Register it in Claude Desktop or Claude Code as below, and an agent can call the tools to build graphs and answer questions (`pip install -e ".[mcp]"`).
 
 ```json
-{"mcpServers": {"humm": {"command": "python", "args": ["-m", "humm.mcp"], "cwd": "<humm 저장소 경로>",
+{"mcpServers": {"humm": {"command": "python", "args": ["-m", "humm.mcp"], "cwd": "<path to the humm repository>",
                          "env": {"HUMM_LLM": "hf:Qwen/Qwen3.5-9B@cuda:1"}}}}
 ```
 
-| MCP 도구 | 제안서 이름 | 내용 |
+| MCP tool | Module | Purpose |
 |---|---|---|
-| `graph_from_table`, `graph_from_text`, `graph_merge`, `graph_get`, `graph_list` | `humm.graph.*` | 그래프 구축·병합·조회 |
-| `validate_run` | `humm.validate.run` | L1·L2 검증, 엣지 상태 갱신 |
-| `engine_identify`, `engine_estimate`, `engine_refute`, `engine_counterfactual` | `humm.engine.*` | 식별·추정·반박·반사실 |
-| `ask` | (오케스트레이터) | 질문 하나를 끝까지 처리 |
+| `graph_from_table`, `graph_from_text`, `graph_merge`, `graph_get`, `graph_list` | `humm.graph.*` | Build, merge and retrieve graphs |
+| `validate_run` | `humm.validate.run` | L1/L2 validation, edge status update |
+| `engine_identify`, `engine_estimate`, `engine_refute`, `engine_counterfactual` | `humm.engine.*` | Identification, estimation, refutation, counterfactuals |
+| `ask` | (orchestrator) | Handle one question end to end |
 
-아래는 같은 함수를 노트북에서 바로 부르는 예이다(LLM 없이, 2장 그래프 사용).""",
+Below is an example of calling the same functions directly from the notebook (no LLM, using the graph from section 2).""",
 """from humm import api
 from humm.mcp.server import mcp
 
 orch.hcg.save(GRAPHS / "marketing-demo.hcg.json")
-print("MCP 도구:", [t.name for t in await mcp.list_tools()])
+print("MCP tools:", [t.name for t in await mcp.list_tools()])
 print(api.engine_identify("marketing-demo", "ad_spend", "sales", files["csv"]))
 print(api.engine_counterfactual("marketing-demo", files["csv"], "ad_spend", "sales", "nie", ["web_traffic"]))
 print(api.ask(QUESTIONS[0], "marketing-demo", files["csv"], files["experiment_csv"], "ad_spend")["answer"])""",
-"""md:## Mac으로 옮길 파일
+"""md:## Result files
 
-실행한 노트북은 원본과 다른 이름으로 저장하고, `notebooks/`의 원본은 출력 없이 둔다.
+Files written by this notebook.
 
-| 파일 | 필수 여부 | 비고 |
+| File | Required | Notes |
 |---|---|---|
-| 이 노트북 | 필수 | `runs/<날짜>-gpu/` |
-| `results/e2e_qwen35.csv` | 필수 | 4장: 모델별 질문 채점표 |
-| `results/e2e/Qwen3.5-4B.md`, `Qwen3.5-9B.md` | 필수 | 4장: 질문별 전체 답변(검사를 통과한 LLM 요약 문단 포함) |
-| `results/e2e/Qwen3.5-4B_narratives.json`, `Qwen3.5-9B_narratives.json` | 필수 | 4장: 요약 문단 원문과 검사 결과 |
-| `results/llm_cache/Qwen3.5-4B.json`, `Qwen3.5-9B.json` | 필수 | LLM 응답 기록(07장 기록에 추가됨). 5장 재생에 쓴다 |
-| `results/validation/marketing-demo-Qwen3.5-4B.hcg.json`, `marketing-demo-Qwen3.5-9B.hcg.json` | 선택 | 모델별 검증된 HCG |
+| `results/e2e_qwen35.csv` | yes | Section 4: per-model scorecard of the questions |
+| `results/e2e/Qwen3.5-4B.md`, `Qwen3.5-9B.md` | yes | Section 4: full answers per question (including LLM summary paragraphs that passed the check) |
+| `results/e2e/Qwen3.5-4B_narratives.json`, `Qwen3.5-9B_narratives.json` | yes | Section 4: raw summary paragraphs and check results |
+| `results/llm_cache/Qwen3.5-4B.json`, `Qwen3.5-9B.json` | yes | Recorded LLM responses (appended to the ones from notebook 07); used for the replay in section 5 |
+| `results/validation/marketing-demo-Qwen3.5-4B.hcg.json`, `marketing-demo-Qwen3.5-9B.hcg.json` | optional | Validated HCG per model |
 
-`data/demo/`, `data/graphs/marketing-demo.hcg.json`은 노트북이 다시 만들므로 옮기지 않아도 된다.""",
+`data/demo/` and `data/graphs/marketing-demo.hcg.json` are regenerated by the notebook, so they need not be kept.""",
 ]
 
 n = nbf.v4.new_notebook()

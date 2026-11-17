@@ -1,7 +1,7 @@
-"""Humm-Gym 데이터셋 생성·저장.
+"""Humm-Gym dataset generation and storage.
 
-- train/dev: 학습 도메인(marketing·manufacturing·medical), test: 보류 도메인(it_ops·무의미 이름)
-- 분할마다 난수 스트림을 분리하고, 문맥+질문이 같은 문항은 분할 안팎에서 중복을 제거한다.
+- train/dev: training domains (marketing, manufacturing, medical); test: held-out domains (it_ops, meaningless names)
+- Each split has its own random stream; items with identical context+question are deduplicated within and across splits.
 """
 import hashlib
 import json
@@ -14,7 +14,7 @@ from ..paths import GYM
 from .queries import GENERATORS
 from .vocab import TEST_DOMAINS, TRAIN_DOMAINS
 
-# 기준선 분석(reports/2026-10-24_baseline.md 6.4)에 따라 nie·nde·ate·반사실 비중을 높였다
+# Weights for nie, nde, ate and counterfactual queries are raised based on baseline analysis
 MIX = {
     "ate": 0.14, "nie": 0.12, "nde": 0.10, "ett": 0.10, "cde": 0.06, "correlation": 0.08, "marginal": 0.06,
     "backadj": 0.10, "dsep": 0.06, "identify": 0.08, "corr2cause": 0.06, "ate_score": 0.04,
@@ -53,7 +53,7 @@ def generate(n: int, split: str = "train", seed: int = 0, mix: dict = MIX, langs
 
 
 def _version(version: int) -> dict:
-    """2: 기존 생성기, 3: humm.gym.v3, 31: v3.1(CLadder식 표면 추가), 32: v3.2(상태 없는 이름 문형 추가), 33: v3.3(corr2cause 원 벤치 표면·도구), 34: v3.4(수치 질의 상태 1/0), 35: v3.5(named 처치 상태 맞바꿈)."""
+    """2: legacy generator, 3: humm.gym.v3, 31: v3.1 (adds CLadder-style surface), 32: v3.2 (adds stateless-name templates), 33: v3.3 (corr2cause original-benchmark surface and tools), 34: v3.4 (numeric-query states 1/0), 35: v3.5 (swaps named treatment states)."""
     if version == 2:
         return {}
     from . import v3
@@ -73,7 +73,7 @@ def read_jsonl(path: str | Path) -> list[dict]:
 
 
 def build(sizes: dict | None = None, seed: int = 0, out_dir: str | Path = GYM, version: int = 2) -> pd.DataFrame:
-    """train → dev → test 순서로 만들며, 앞 분할의 문항은 뒤 분할에서 제외한다. 분할별 통계표를 돌려준다. version=3은 humm.gym.v3, 31은 v3.1 생성기."""
+    """Builds train, dev, test in order; items in earlier splits are excluded from later ones. Returns per-split statistics. version=3 uses humm.gym.v3, 31 uses the v3.1 generator."""
     sizes = sizes or {"train": 100_000, "dev": 2_000, "test": 5_000}
     seen, stats = set(), []
     for split, n in sizes.items():

@@ -1,4 +1,4 @@
-"""식별된 추정식(Estimand)을 데이터로 계산한다. 이진 데이터는 층화(비모수), 연속 데이터는 선형 회귀를 쓴다."""
+"""Compute an identified Estimand from data: stratification (nonparametric) for binary data, linear regression for continuous data."""
 from dataclasses import dataclass
 
 import networkx as nx
@@ -20,9 +20,9 @@ class Estimate:
         return f"{self.estimand.strategy}/{self.method}: {self.value:.4f}  95% CI [{self.ci[0]:.4f}, {self.ci[1]:.4f}]"
 
 
-# ---------- 이진 데이터 ----------
+# ---------- Binary data ----------
 def backdoor_stratified(df: pd.DataFrame, x: str, y: str, z: list[str]) -> float:
-    """Σ_z [P(y|x=1,z) - P(y|x=0,z)] P(z). 빈 층이 있으면(양수성 위반) NaN을 낸다."""
+    """Σ_z [P(y|x=1,z) - P(y|x=0,z)] P(z). Returns NaN if a stratum is empty (positivity violation)."""
     d = df.assign(_all=0)
     keys = z or ["_all"]
     cell = d.groupby(keys + [x])[y].mean().unstack(x)
@@ -31,7 +31,7 @@ def backdoor_stratified(df: pd.DataFrame, x: str, y: str, z: list[str]) -> float
 
 
 def frontdoor_discrete(df: pd.DataFrame, x: str, y: str, m: list[str]) -> float:
-    """E[y|do(x=a)] = Σ_m P(m|a) Σ_x' P(y|x',m) P(x'), a=1 과 a=0 의 차."""
+    """E[y|do(x=a)] = Σ_m P(m|a) Σ_x' P(y|x',m) P(x'), difference between a=1 and a=0."""
     pm_x = df.groupby(x)[m].value_counts(normalize=True).unstack(x).fillna(0)
     py_xm = df.groupby(m + [x])[y].mean().unstack(x)
     px = df[x].value_counts(normalize=True)
@@ -39,7 +39,7 @@ def frontdoor_discrete(df: pd.DataFrame, x: str, y: str, m: list[str]) -> float:
     return float(((pm_x[1] - pm_x[0]) * inner.reindex(pm_x.index)).sum())
 
 
-# ---------- 연속 데이터 (선형) ----------
+# ---------- Continuous data (linear) ----------
 def _ols(df: pd.DataFrame, y: str, xs: list[str]) -> np.ndarray:
     a = np.column_stack([np.ones(len(df))] + [df[c].to_numpy(float) for c in xs])
     return np.linalg.lstsq(a, df[y].to_numpy(float), rcond=None)[0][1:]
@@ -50,7 +50,7 @@ def backdoor_ols(df: pd.DataFrame, x: str, y: str, z: list[str]) -> float:
 
 
 def frontdoor_linear(df: pd.DataFrame, x: str, y: str, m: list[str]) -> float:
-    """Σ_m (x → m 계수) × (x를 통제한 m → y 계수). 매개변수끼리 엣지가 없는 경우에 맞다."""
+    """Σ_m (x → m coefficient) × (m → y coefficient controlling for x). Valid when there are no edges among mediators."""
     a = np.array([_ols(df, mi, [x])[0] for mi in m])
     b = _ols(df, y, m + [x])[: len(m)]
     return float(a @ b)
@@ -81,7 +81,7 @@ def is_binary(df: pd.DataFrame, cols) -> bool:
 
 def estimate(g: nx.DiGraph, df: pd.DataFrame, x: str, y: str, latent=(), n_boot: int = 200, seed: int = 0,
              estimand: Estimand | None = None) -> Estimate:
-    """identify → 데이터 유형에 맞는 추정기 → 부트스트랩 표준오차·95% 신뢰구간."""
+    """identify → estimator matching the data type → bootstrap standard error and 95% confidence interval."""
     e = estimand or identify(g, x, y, latent)
     v = sorted(e.variables)
     binary = is_binary(df, [x, y] + v)

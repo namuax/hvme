@@ -1,45 +1,45 @@
 ---
 name: humm-graph-from-text
-description: 보고서·논문·로그·회의록 같은 문서에서 인과 구조를 뽑아 HCG로 만들 때 쓴다. "이 보고서에서 원인-결과 관계 정리해줘", "문서로 인과 그래프 만들어줘" 같은 요청에 인과 주장 추출·정규화·문서 간 집계·반사실 검증을 실행한다.
+description: Use to extract causal structure from documents such as reports, papers, logs, or meeting notes and build an HCG. For requests like "summarize the cause-effect relations in this report" or "build a causal graph from these documents" (Korean such as "문서로 인과 그래프 만들어줘" is supported), it runs causal-claim extraction, normalization, cross-document aggregation, and counterfactual verification.
 ---
 
-## 언제 쓰나
+## When to use
 
-- 인과 근거가 문서에만 있거나, 데이터 그래프에 도메인 지식(방향·숨은 변수)을 더하고 싶을 때 쓴다.
-- LLM이 필요하므로 `llm` 인자나 `HUMM_LLM`이 설정되어 있어야 한다.
+- Use it when the causal evidence exists only in documents, or when you want to add domain knowledge (directions, hidden variables) to a data graph.
+- An LLM is required, so the `llm` argument or `HUMM_LLM` must be set.
 
-## 절차
+## Procedure
 
-1. 가정 명시: 문서의 출처·작성 시점·신뢰도를 적고, 문서 속 주장은 "주장"일 뿐 검증된 인과가 아니라고 사용자에게 먼저 알린다.
-2. 문서 준비: JSONL(`{"id", "text"}` 한 줄씩) 또는 `.txt`/`.md` 파일 폴더 경로를 마련한다.
-3. 그래프 구축: `humm.graph_from_text(docs, graph_id, domain="<분야>", llm="")`를 부른다.
-4. 그래프 확인: 반환된 `edges`와 `claims`(추출한 주장 수)를 보고, 같은 개념이 다른 노드로 갈라졌는지 `nodes[].aliases`로 확인한다.
-5. 데이터가 있으면 `humm.graph_merge(text_graph, table_graph, graph_id, column_aliases={"<열>": ["문서 속 이름", ...]})`로 정형 그래프에 합친다. 노드 연결 결과는 반환값 `link`로 확인한다.
-6. 쓰기 전에 `humm-validate-dag`로 넘긴다(데이터가 없으면 L1 구조 검증만 가능하다고 말한다).
+1. State assumptions: write down the document's source, date, and reliability, and first tell the user that claims in documents are only "claims", not verified causation.
+2. Prepare documents: provide either JSONL (one `{"id", "text"}` per line) or the path to a folder of `.txt`/`.md` files.
+3. Build the graph: call `humm.graph_from_text(docs, graph_id, domain="<field>", llm="")`.
+4. Check the graph: look at the returned `edges` and `claims` (the number of extracted claims), and use `nodes[].aliases` to check whether the same concept was split into different nodes.
+5. If data exists, merge into the tabular graph with `humm.graph_merge(text_graph, table_graph, graph_id, column_aliases={"<column>": ["name in document", ...]})`. Check how nodes were linked in the returned `link`.
+6. Hand off to `humm-validate-dag` before using the graph (if there is no data, say that only L1 structural validation is possible).
 
-## 흄 원칙 체크리스트
+## Hume principles checklist
 
-- [ ] 상관만으로 인과를 단정하지 않는다.
-- [ ] 숨은 교란을 항상 점검한다.
-- [ ] 반사실은 가정 위에서만 말한다.
-- [ ] 문서가 "함께 늘었다"고 쓴 것을 인과 엣지로 올리지 않았는지 인용(`quote`)을 확인한다.
-- [ ] 한 문서에만 나온 엣지는 단일 출처로 표시한다.
+- [ ] Never assert causation from correlation alone.
+- [ ] Always check for hidden confounding.
+- [ ] State counterfactuals only on top of explicit assumptions.
+- [ ] Check the quotes (`quote`) to make sure that "rose together" in a document was not promoted to a causal edge.
+- [ ] Mark an edge that appears in only one document as single-source.
 
-## 결과 해석
+## Interpreting results
 
-- `edges[].evidence`에 `text`가 있으면 문서 근거 엣지이고, `confidence`는 문서 간 집계와 반사실 검증 결과를 반영한다.
-- `status`가 `hypothesis`인 엣지는 아직 데이터로 확인되지 않은 것이다.
-- `claims`가 적으면 추출이 빈약한 것이므로 문서를 늘리라고 제안한다.
-- 병합 결과의 `link`는 텍스트 노드와 데이터 열의 대응이며, 잘못 이어진 쌍은 `column_aliases`로 고친다.
+- If `edges[].evidence` contains `text`, the edge is backed by documents, and `confidence` reflects cross-document aggregation and counterfactual verification.
+- An edge with `status` `hypothesis` has not yet been confirmed by data.
+- If `claims` is small, extraction was thin, so suggest adding more documents.
+- `link` in the merge result is the mapping between text nodes and data columns; fix wrongly joined pairs with `column_aliases`.
 
-## 한계 고지
+## Limitations to disclose
 
-- 텍스트 엣지는 저자의 주장과 LLM 추출에 기대며, 데이터 검증 전에는 가설이라고 말한다.
-- 데이터 열이 없는 텍스트 노드는 이후 분석에서 관측되지 않은 변수(latent)로 다뤄진다고 알린다.
-- 추출에 쓴 LLM과 문서 범위를 밝힌다.
+- Text edges rest on the authors' claims and LLM extraction; say they are hypotheses until validated against data.
+- Tell the user that text nodes with no data column are treated as unobserved (latent) variables in later analysis.
+- State which LLM was used for extraction and the scope of the documents.
 
-## 다른 Skill로 넘기기
+## Handing off to other Skills
 
-- 다음 단계 → `humm-validate-dag`
-- 데이터 그래프가 없으면 → `humm-graph-from-table`
-- 엣지 판단 대량 확인 → `humm-fast-judge`
+- Next step → `humm-validate-dag`
+- If there is no data graph → `humm-graph-from-table`
+- Checking many edge judgments → `humm-fast-judge`

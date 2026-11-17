@@ -1,9 +1,9 @@
-"""오케스트레이터 v1의 두 모델 단계 (02_proposal.md 7장).
+"""The two model stages of orchestrator v1.
 
-① 질의 분석: Humm-Fast가 질문의 Rung(1 연관·2 개입·3 반사실)을 한 번의 순전파로 고른다. 확신도(최대 보기 확률)가
-   threshold보다 낮으면 Humm-LM에 JSON으로 다시 묻는다. 변수(처치·결과·매개)는 v0처럼 질문 문자열의 표현으로 정한다.
-⑤ 검증: Humm-LM(tool 모드)이 그래프와 데이터로 적합한 확률표를 Gym 문맥으로 읽고 "처치가 결과를 올리는가"를 따로 푼다.
-   엔진 추정 ATE의 부호와 비교해 일치 여부를 붙인다. LM은 수치를 직접 만들지 않고 causal_engine 도구로 계산한다.
+1. Query analysis: Humm-Fast picks the question's Rung (1 association, 2 intervention, 3 counterfactual) in a single forward pass. If the confidence (max option probability) is
+   below threshold, Humm-LM is asked again for JSON. Variables (treatment, outcome, mediators) are decided from expressions in the question string, as in v0.
+5. Verification: Humm-LM (tool mode) reads the probability table fitted from the graph and data as a Gym context and solves "does the treatment raise the outcome?" independently.
+   The answer is compared with the sign of the engine-estimated ATE to report agreement. The LM does not produce numbers itself; it computes them with the causal_engine tool.
 """
 import re
 
@@ -38,7 +38,7 @@ def rung_item(question: str) -> dict:
 
 
 class QueryRouter:
-    """fast: FastJudge(또는 option_probs 공급자), lm: complete가 있는 공급자(없으면 Fast 답을 그대로 쓴다)."""
+    """fast: FastJudge (or an option_probs provider); lm: a provider with complete (if absent, the Fast answer is used as is)."""
 
     def __init__(self, fast, lm=None, threshold: float = 0.8):
         self.fast, self.lm, self.threshold = fast, lm, threshold
@@ -65,14 +65,14 @@ class QueryRouter:
 
 
 def lexicon(hcg: HCG, nodes) -> Lexicon:
-    """노드 id → 이진 변수 어휘(1 = high, 0 = low). 영어 이름은 id의 밑줄을 띄어 쓴다."""
+    """Node id -> binary variable lexicon (1 = high, 0 = low). English names replace underscores in the id with spaces."""
     label = {n.id: n.label or n.id for n in hcg.nodes}
     return Lexicon({v: (label[v], "높음", "낮음", v.replace("_", " "), "high", "low") for v in nodes}, "en")
 
 
 def verify_item(hcg: HCG, df: pd.DataFrame, x: str, y: str) -> dict:
-    """처치·결과의 관측된 조상으로 이진 SCM을 적합해 Gym 개입 문항(tool 모드)으로 만든다.
-    관측되지 않는 조상은 문맥에서 빠진다(그 경우 LM 답은 숨은 교란을 보지 못한다, latent에 남긴다)."""
+    """Fit a binary SCM on the observed ancestors of treatment and outcome and build a Gym intervention item (tool mode).
+    Unobserved ancestors are left out of the context (the LM answer then cannot see hidden confounding; they are recorded in latent)."""
     g = hcg.to_networkx()
     scm = fit_scm(g, df, [x, y])
     lex = lexicon(hcg, scm.order)
@@ -83,7 +83,7 @@ def verify_item(hcg: HCG, df: pd.DataFrame, x: str, y: str) -> dict:
 
 
 def lm_verify(lm, hcg: HCG, df: pd.DataFrame, x: str, y: str, engine_ate: float, engine_ci=None, max_new_tokens: int = 1536) -> dict:
-    """lm: HFProvider(Humm-LM). 엔진 CI가 0을 포함하면 부호가 정해지지 않아 agree는 None이다."""
+    """lm: HFProvider (Humm-LM). If the engine CI contains 0, the sign is undetermined and agree is None."""
     from ..lm.sample import generate_tools
 
     item = verify_item(hcg, df, x, y)

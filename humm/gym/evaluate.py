@@ -1,4 +1,4 @@
-"""Humm-Gym 문항으로 모델을 평가한다. direct는 답 토큰 확률(Humm-Fast 관점), cot는 풀이 생성 후 채점(Humm-LM 관점)."""
+"""Evaluate a model on Humm-Gym items. direct scores answer-token probabilities (Humm-Fast view); cot generates a solution and then grades it (Humm-LM view)."""
 import numpy as np
 import pandas as pd
 
@@ -7,7 +7,7 @@ from .formats import option_labels, parse_final, render, reward, target_index
 
 
 def eval_direct(provider, items: list[dict]) -> pd.DataFrame:
-    """보기 토큰이 같은 문항끼리 묶어 option_probs를 한 번에 계산한다."""
+    """Group items sharing option tokens and compute option_probs in one batch."""
     df = pd.DataFrame(items).assign(labels=[tuple(option_labels(d)) for d in items], target=[target_index(d) for d in items])
     out = []
     for labels, g in df.groupby("labels", sort=False):
@@ -24,7 +24,7 @@ def eval_cot(provider, items: list[dict], max_new_tokens: int = 4096) -> pd.Data
 
 
 def summarize(res: pd.DataFrame, by=("query_type",)) -> pd.DataFrame:
-    """정확도, (cot) 파싱 실패율, (direct·noul) 확률 보정 ECE."""
+    """Accuracy, (cot) parse-failure rate, (direct, noul) probability-calibration ECE."""
     def stats(d):
         row = {"n": len(d), "acc": d.correct.mean()}
         cot = d[d["mode"] == "cot"] if "answer" in d else d.iloc[:0]

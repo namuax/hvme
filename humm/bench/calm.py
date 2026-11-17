@@ -1,8 +1,8 @@
-"""CaLM-lite(영어 45과제, 개방형 CEG-O 제외): 원 저장소(data/bench/calm_repo)의 프롬프트 생성·채점 함수를 그대로 쓴다.
+"""CaLM-lite (45 English tasks, excluding open-ended CEG-O): uses the original repository's (data/bench/calm_repo) prompt-generation and scoring functions as is.
 
-채점은 응답 전체에 원 함수를 적용한 값(correct)과, 최종 답에만 적용한 값(correct_tail)을 함께 남긴다.
-원 채점은 응답에서 처음 나오는 예/아니오·보기 문자열을 읽어서, 풀이를 먼저 쓰는 모델은 중간 문장이 답으로 읽힌다.
-tool 모드에서는 변수 상태 yes/no가 먼저 나와 원 채점이 거의 늘 상태 이름을 읽는다. 최종 답은 마지막 'Final answer:' 뒤, 없으면 마지막 문단이다.
+Both the result of applying the original function to the whole response (correct) and to the final answer only (correct_tail) are recorded.
+The original scorer reads the first yes/no or option string in the response, so for models that write the solution first, an intermediate sentence gets read as the answer.
+In tool mode the variable-state yes/no appears first, so the original scorer almost always reads a state name. The final answer is what follows the last 'Final answer:', or else the last paragraph.
 """
 import random
 import re
@@ -22,19 +22,19 @@ TASKS = [t for t in task_hiearchy_dict if t.endswith("_EN") and task_to_accuracy
 
 
 def questions(task: str, style: str = "basic", n: int | None = None, seed: int = 0) -> list[dict]:
-    """과제 하나의 문항(원 프롬프트 'question' 포함). n이면 시드 고정으로 n개만."""
+    """Items of one task (including the original prompt 'question'). If n is given, only n items with a fixed seed."""
     items = generate_question_list(dataset_path=REPO / "calm_lite_dataset" / f"{task_hiearchy_dict[task]}{task}.json", prompt_style=style)
     return items if n is None else sorted(random.Random(seed).sample(items, n), key=lambda d: d["index"])
 
 
 def correct(task: str, item: dict, response: str, style: str = "basic") -> bool:
-    """원 채점 함수로 한 문항의 정오를 낸다."""
+    """Score one item with the original scoring function."""
     gt, pred, acc = initialize_core_metric_evaluation_components(task)
     return acc([gt(item)], [pred(response, item, style, task.split("-")[0])]) == 1
 
 
 def tail(response: str) -> str:
-    """최종 답: 마지막 'Final answer:' 뒤, 없으면 마지막 빈 줄 뒤의 문단."""
+    """Final answer: text after the last 'Final answer:', or else the paragraph after the last blank line."""
     i = response.lower().rfind("final answer:")
     return response[i + len("final answer:"):].strip() if i >= 0 else response.strip().split("\n\n")[-1]
 
@@ -43,6 +43,6 @@ GIVEN = re.compile(r"direct effect on|probability|causes|->", re.I)
 
 
 def needs_tools(question: str) -> bool:
-    """v2.12 경로 규칙: 인과 관계(그래프)나 확률이 주어진 문제에만 도구를 준다. 텍스트·상식 인과(COPA·e-CARE·ECI·CRASS 등)는 도구 없이 푼다.
-    4B 평가표에서 v2.11 tool은 상식 인과에도 그래프를 억지로 세워 떨어졌다(CRASS 80 → 17)."""
+    """Routing rule: tools are given only to problems that state causal relations (a graph) or probabilities. Textual and commonsense causality (COPA, e-CARE, ECI, CRASS, etc.) is solved without tools.
+    Previously, tool mode forced a graph onto commonsense causality and scored poorly (CRASS 80 → 17)."""
     return bool(GIVEN.search(question))

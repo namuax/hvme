@@ -1,0 +1,149 @@
+{
+ "model": "humm LM 9B (Qwen3.5-9B + LoRA, tool mode)",
+ "harness": "vLLM 0.33 bf16, greedy, tools on",
+ "calm_lite": {
+  "n": 1350,
+  "accuracy": 0.9148,
+  "by_task": {
+   "AC-B_causal_judgement_EN": 0.6333,
+   "AR-B_CaLM-AR_EN": 0.8333,
+   "ATE-B_ATE-natural_EN": 0.9,
+   "ATE-P_ATE-basic_EN": 1.0,
+   "ATE-P_ATE-hard_EN": 1.0,
+   "BAS-B_backadj_EN": 0.9,
+   "BAS-C_max-BAS_EN": 0.9667,
+   "BAS-C_min-BAS_EN": 1.0,
+   "BAS-C_mix-BAS_EN": 0.9333,
+   "CA-B_FA_EN": 0.8333,
+   "CA-B_FP_EN": 0.8667,
+   "CB-B_collider-bias_EN": 0.9333,
+   "CDE-B_CDE-natural_EN": 1.0,
+   "CDE-P_CDE-basic_EN": 1.0,
+   "CDE-P_CDE-hard_EN": 0.9,
+   "CEI-B_0.2-UC_EN": 1.0,
+   "CEI-B_0.4-UC_EN": 1.0,
+   "CEI-B_0.6-UC_EN": 1.0,
+   "CEI-B_0.8-UC_EN": 1.0,
+   "CORR-B_correlation_EN": 0.9333,
+   "CR-B_det-counterfactual_EN": 0.8667,
+   "CR-C_CRASS_EN": 0.8,
+   "EAE-B_exp-away_EN": 0.9333,
+   "ECI-B_CTB_EN": 0.8667,
+   "ECI-B_ESC_EN": 0.7667,
+   "ECI-B_MAVEN-ERE_EN": 0.8,
+   "ETT-B_ETT-natural_EN": 1.0,
+   "ETT-P_ETT-basic_EN": 1.0,
+   "ETT-P_ETT-hard_EN": 0.9333,
+   "FAS-C_FAS_EN": 1.0,
+   "IV-C_CaLM-IV_EN": 0.9333,
+   "NDE-B_NDE-natural_EN": 1.0,
+   "NDE-P_NDE-basic_EN": 1.0,
+   "NDE-P_NDE-hard_EN": 1.0,
+   "NIE-B_NIE-natural_EN": 0.9333,
+   "NIE-P_NIE-basic_EN": 0.9333,
+   "NIE-P_NIE-hard_EN": 0.9667,
+   "PCD-B_COPA_EN": 0.6,
+   "PCD-B_E-CARE_EN": 0.7,
+   "PCD-C_COPA_EN": 0.9333,
+   "PCD-C_E-CARE_EN": 0.8667,
+   "PN-P_PN-basic_EN": 0.9,
+   "PN-P_PN-hard_EN": 0.8,
+   "PS-P_PS-basic_EN": 1.0,
+   "PS-P_PS-hard_EN": 1.0
+  }
+ },
+ "caugym": {
+  "n": 630,
+  "accuracy": 0.7556,
+  "by_set": {
+   "base": 0.9714,
+   "deconfounding": 0.9524,
+   "insufficient": 0.0,
+   "omitted": 0.7143,
+   "redundant": 0.9619,
+   "rephrased": 0.9333
+  },
+  "by_type": {
+   "ATE": 0.8111,
+   "CDE": 0.7778,
+   "ETT": 0.7222,
+   "NDE": 0.8,
+   "NIE": 0.6889,
+   "PN": 0.7667,
+   "PS": 0.7222
+  }
+ },
+ "cladder_150_tool": {
+  "n": 150,
+  "accuracy": 0.9067,
+  "no_answer": 3,
+  "by_query_type": {
+   "ate": 1.0,
+   "backadj": 1.0,
+   "correlation": 0.8333,
+   "det-counterfactual": 0.8824,
+   "ett": 0.8421,
+   "exp_away": 1.0,
+   "marginal": 0.9091,
+   "nde": 0.8,
+   "nie": 0.7778
+  }
+ },
+ "kocladder_en": {
+  "n": 528,
+  "accuracy": 0.9072,
+  "no_answer": 0.0189,
+  "by_query_type": {
+   "ate": 0.9307,
+   "backadj": 0.9639,
+   "collider_bias": 1.0,
+   "correlation": 0.8675,
+   "det-counterfactual": 0.8936,
+   "ett": 0.8767,
+   "exp_away": 0.8235,
+   "marginal": 0.9286,
+   "nde": 0.8462,
+   "nie": 0.9
+  }
+ },
+ "kocladder_ko": {
+  "n": 528,
+  "accuracy": 0.7576,
+  "no_answer": 0.0492,
+  "by_query_type": {
+   "ate": 0.7525,
+   "backadj": 0.7349,
+   "collider_bias": 1.0,
+   "correlation": 0.7229,
+   "det-counterfactual": 0.617,
+   "ett": 0.7808,
+   "exp_away": 0.8235,
+   "marginal": 0.8286,
+   "nde": 0.6154,
+   "nie": 0.9
+  }
+ },
+ "kocorr2cause_en": {
+  "n": 1157,
+  "accuracy": 0.9758,
+  "no_answer": 0.0
+ },
+ "kocorr2cause_ko": {
+  "n": 1157,
+  "accuracy": 0.9628,
+  "no_answer": 0.0147
+ },
+ "corr2cause_300_tool": {
+  "n": 300,
+  "accuracy": 0.98,
+  "f1": 0.9231
+ },
+ "kmmlu_20_per_subject": {
+  "n": 900,
+  "accuracy": 0.643
+ },
+ "gym_v3_520_tool": {
+  "n": 520,
+  "accuracy": 0.998
+ }
+}

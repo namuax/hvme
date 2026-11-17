@@ -1,45 +1,45 @@
 ---
 name: humm-counterfactual
-description: 사용자가 "만약 그때 ~했다면?", "~하지 않았다면 결과가 달랐을까?", "효과 중 얼마가 ~를 거쳐 왔나?" 같은 Rung 3 질문에 쓴다. 데이터로 적합한 이진 SCM에서 ETT·NDE·NIE·PN·PS를 계산하고 가정과 함께 서술한다.
+description: Use for Rung 3 questions such as "what if we had done X back then?", "would the outcome have been different without X?", or "how much of the effect went through M?" (Korean such as "만약 그때 ~했다면?" is supported). It computes ETT, NDE, NIE, PN, and PS on a binary SCM fitted to the data and reports them together with their assumptions.
 ---
 
-## 언제 쓰나
+## When to use
 
-- `humm-causal-question`이 Rung 3(`kind="ett"`·`"mediation"`)으로 분류했거나 필요성·충분성 확률(PN·PS)을 물을 때 쓴다.
-- 처치·결과·매개 변수가 모두 0/1 이진 열로 데이터에 있을 때만 쓴다.
+- Use it when `humm-causal-question` classified the question as Rung 3 (`kind="ett"` or `"mediation"`), or when the user asks for probabilities of necessity or sufficiency (PN, PS).
+- Use it only when the treatment, outcome, and mediator variables are all 0/1 binary columns in the data.
 
-## 절차
+## Procedure
 
-1. 가정 명시: 사실 세계(실제로 일어난 일)와 반사실 세계(바꾼 처치)를 문장으로 나눠 적는다.
-2. 그래프 확인: `humm.graph_get(graph_id)`로 처치·결과·매개의 조상이 데이터에 있는지 보고, `humm.engine_identify(graph_id, treatment, outcome, csv)`로 개입 효과가 식별되는지 먼저 확인한다.
-3. 반사실 계산: `humm.engine_counterfactual(graph_id, csv, treatment, outcome, query="ett", mediators=None)`을 부른다. `query`는 `ate`, `ett`, `nde`, `nie`, `pn`, `ps` 중 하나이고, `nde`·`nie`는 `mediators=[...]`가 필요하다.
-4. 구간·민감도가 필요하면 `humm.ask(question, graph_id, csv)`를 불러 `estimates`(ett 또는 nde·nie, ate_scm)와 `sensitivity_table`을 받는다.
-5. 식별이 깨지면(`strategy="not_identified"`) 반사실 숫자를 내지 않는다.
+1. State assumptions: write out, as sentences, the factual world (what actually happened) and the counterfactual world (the changed treatment).
+2. Check the graph: use `humm.graph_get(graph_id)` to see whether the ancestors of the treatment, outcome, and mediators are in the data, and first confirm with `humm.engine_identify(graph_id, treatment, outcome, csv)` that the intervention effect is identified.
+3. Compute the counterfactual: call `humm.engine_counterfactual(graph_id, csv, treatment, outcome, query="ett", mediators=None)`. `query` is one of `ate`, `ett`, `nde`, `nie`, `pn`, `ps`; `nde` and `nie` need `mediators=[...]`.
+4. If you need intervals or sensitivity, call `humm.ask(question, graph_id, csv)` to get `estimates` (ett, or nde and nie, plus ate_scm) and `sensitivity_table`.
+5. If identification fails (`strategy="not_identified"`), do not report a counterfactual number.
 
-## 흄 원칙 체크리스트
+## Hume principles checklist
 
-- [ ] 상관만으로 인과를 단정하지 않는다.
-- [ ] 숨은 교란을 항상 점검한다.
-- [ ] 반사실은 가정 위에서만 말한다.
-- [ ] 반사실 값이 SCM 메커니즘 가정(문턱값·단조성, 노드별 독립 잡음)에 기댄다는 문장을 답에 넣는다.
-- [ ] 매개 분해에서는 매개–결과 사이에 처치의 영향을 받는 교란이 없다는 가정을 확인한다.
-- [ ] ETT 부호는 "실제 − 반사실"인지, 사용자 질문의 방향과 맞는지 확인한다.
+- [ ] Never assert causation from correlation alone.
+- [ ] Always check for hidden confounding.
+- [ ] State counterfactuals only on top of explicit assumptions.
+- [ ] Put a sentence in the answer saying the counterfactual value relies on SCM mechanism assumptions (thresholds, monotonicity, independent noise per node).
+- [ ] For mediation decomposition, confirm the assumption that there is no confounder between mediator and outcome that is affected by the treatment.
+- [ ] Check that the ETT sign is "actual minus counterfactual" and matches the direction of the user's question.
 
-## 결과 해석
+## Interpreting results
 
-- `engine_counterfactual`: `query`, `value`, `exact`(true면 정확 계산, false면 몬테카를로 근사), `nodes`(SCM에 쓴 노드)이다.
-- `ask` 결과: `kind`가 `ett`이면 `estimates.ett`, `mediation`이면 `estimates.nde`·`estimates.nie`, 공통으로 `estimates.ate`·`estimates.ate_scm`이 있고 각 항목은 `value`·`ci`이다. `mediators`, `assumptions`, `graph_sensitivity`도 함께 읽는다.
-- `pn`·`ps`는 `ask`가 다루지 않으므로 `engine_counterfactual`로만 구하며 구간이 없다.
+- `engine_counterfactual`: `query`, `value`, `exact` (true means exact computation, false means a Monte Carlo approximation), and `nodes` (the nodes used in the SCM).
+- `ask` result: if `kind` is `ett`, read `estimates.ett`; if `mediation`, read `estimates.nde` and `estimates.nie`; `estimates.ate` and `estimates.ate_scm` are present in both cases, and each item has `value` and `ci`. Also read `mediators`, `assumptions`, and `graph_sensitivity`.
+- `ask` does not handle `pn` and `ps`, so get them only from `engine_counterfactual`; they have no interval.
 
-## 한계 고지
+## Limitations to disclose
 
-- 반사실은 관측 데이터만으로 식별되지 않는 양이며, 적합한 이진 SCM 가정 위에서만 성립한다고 반드시 말한다.
-- 엔진은 이진 변수만 지원하므로 연속 변수 질문은 이진화 기준을 밝히거나 "식별 불가 + 필요한 데이터"로 답한다.
-- `exact=false`이면 근사값이라고 말한다.
-- 숨은 교란 대안에서 매개·ETT 식별이 깨지는지(`graph_sensitivity.breaks_with_hidden_confounder`) 말한다.
+- Always say that a counterfactual is a quantity that observational data alone does not identify, and that it holds only under the fitted binary SCM's assumptions.
+- The engine supports only binary variables, so for a continuous-variable question either state the binarization rule or answer "not identifiable + the data needed".
+- If `exact=false`, say the value is an approximation.
+- Say whether mediation or ETT identification breaks under a hidden-confounder alternative (`graph_sensitivity.breaks_with_hidden_confounder`).
 
-## 다른 Skill로 넘기기
+## Handing off to other Skills
 
-- 결과 검증 → `humm-refute`
-- 보고 → `humm-explain`
-- 개입 효과만 필요하면 → `humm-identify-estimate`
+- Checking the result → `humm-refute`
+- Reporting → `humm-explain`
+- If only the intervention effect is needed → `humm-identify-estimate`

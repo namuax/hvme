@@ -1,8 +1,8 @@
-"""Humm-LM SFT (Step 9-1): Gym CoT 프롬프트 → 풀이 궤적을 학습한다. 손실은 풀이 토큰에만 준다.
+"""Humm-LM SFT: learn Gym CoT prompt -> solution trajectory. The loss is applied only to solution tokens.
 
-- 교사: 풀이 템플릿 궤적(humm.lm.solutions, 엔진 계산 과정) + 선택적으로 9B rejection sampling 궤적(humm.lm.sample)
-- 입력 형식은 추론과 같다: 채팅 템플릿(enable_thinking=False)의 생성 프롬프트 뒤에 풀이와 EOS를 붙인다
-- LoRA(humm.fast.lora)로 학습하고, 끝나면 가중치에 합쳐 일반 모델로 저장한다
+- Teacher: solution-template trajectories (humm.lm.solutions, the engine's computation steps) plus, optionally, 9B rejection-sampling trajectories (humm.lm.sample)
+- The input format matches inference: the solution and EOS are appended after the chat template's generation prompt (enable_thinking=False)
+- Trained with LoRA (humm.fast.lora); afterwards the adapter is merged into the weights and saved as a plain model
 """
 import math
 import os
@@ -13,11 +13,11 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .data import WEIGHTS, pick, template_examples  # noqa: F401 (노트북에서 sft로도 불러온다)
+from .data import WEIGHTS, pick, template_examples  # noqa: F401 (also imported via sft in notebooks)
 from .tools import TOOLS
 
 def encode(tok, ex: dict, max_len: int) -> tuple[list[int], list[int]]:
-    """(input_ids, labels). 프롬프트 위치의 labels는 -100(손실 제외). ex에 messages가 있으면 encode_messages."""
+    """(input_ids, labels). Labels at prompt positions are -100 (excluded from the loss). If ex has messages, uses encode_messages."""
     if "messages" in ex:
         return encode_messages(tok, ex, max_len)
     prompt = tok.apply_chat_template([{"role": "user", "content": ex["prompt"]}], tokenize=False, add_generation_prompt=True, enable_thinking=False)
@@ -27,9 +27,9 @@ def encode(tok, ex: dict, max_len: int) -> tuple[list[int], list[int]]:
 
 
 def encode_messages(tok, ex: dict, max_len: int) -> tuple[list[int], list[int]]:
-    """다중 턴(도구 호출 포함) 대화. 어시스턴트 턴(내용·도구 호출·<|im_end|>)에만 손실을 준다. "train": False인 턴(잘못 고른 도구 호출)은 문맥으로만 쓴다.
+    """Multi-turn conversation (including tool calls). The loss is applied only to assistant turns (content, tool calls, <|im_end|>). Turns with "train": False (wrongly chosen tool calls) are used only as context.
 
-    각 어시스턴트 턴의 앞부분은 추론 때와 같이 add_generation_prompt로 만든 문자열이고, 조각마다 따로 토큰화한다(추론 때 토큰 경계와 같다).
+    The head of each assistant turn is the string built with add_generation_prompt, as at inference, and each piece is tokenized separately (matching the token boundaries at inference).
     """
     msgs, tools = ex["messages"], TOOLS if ex.get("tools") else None
     render = lambda m, gen: tok.apply_chat_template(m, tools=tools, tokenize=False, add_generation_prompt=gen, enable_thinking=False)
@@ -56,17 +56,17 @@ def collate(batch, pad_id: int, device):
 def train_sft(model, tok, examples: list[dict], epochs: float = 1.0, lr: float = 1e-4, batch_size: int = 2, grad_accum: int = 16,
               max_len: int = 3072, warmup: float = 0.03, log_every: int = 20, seed: int = 0, log=print,
               ckpt: str | Path | None = None, ckpt_every: int = 40) -> pd.DataFrame:
-    """LoRA를 붙인 모델(humm.fast.lora.add_lora)을 받는다. 길이가 비슷한 예제끼리 묶어 패딩을 줄인다.
+    """Takes a model with LoRA attached (humm.fast.lora.add_lora). Examples of similar length are batched together to reduce padding.
 
-    ckpt를 주면 ckpt_every step마다 LoRA·옵티마이저·스케줄러를 저장하고, 파일이 있으면 그 step부터 이어 학습한다
-    (배치 순서는 seed로 정해지므로 같은 예제·seed면 끊기지 않은 학습과 같은 배치를 본다)."""
+    If ckpt is given, LoRA, optimizer and scheduler are saved every ckpt_every steps, and training resumes from that step if the file exists
+    (batch order is determined by seed, so the same examples and seed see the same batches as an uninterrupted run)."""
     model.train()
     model.config.use_cache = False
     model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     enc = [encode(tok, ex, max_len) for ex in examples]
     rng = np.random.default_rng(seed)
     order = np.concatenate([rng.permutation(len(enc)) for _ in range(math.ceil(epochs))])[: int(len(enc) * epochs)]
-    chunks = [order[i:i + batch_size * 64] for i in range(0, len(order), batch_size * 64)]  # 64배치 묶음 안에서 길이순 정렬
+    chunks = [order[i:i + batch_size * 64] for i in range(0, len(order), batch_size * 64)]  # sort by length within groups of 64 batches
     batches = [sorted(c, key=lambda i: len(enc[i][0]))[j:j + batch_size] for c in chunks for j in range(0, len(c), batch_size)]
     batches = [batches[i] for i in rng.permutation(len(batches))]
     steps = len(batches) // grad_accum
@@ -82,7 +82,7 @@ def train_sft(model, tok, examples: list[dict], epochs: float = 1.0, lr: float =
         sched.load_state_dict(st["sched"])
         hist, start = st["hist"], st["step"]
         t0 -= hist[-1]["sec"] if hist else 0
-        log(f"체크포인트 {ckpt}: {start}/{steps} step에서 이어 학습")
+        log(f"checkpoint {ckpt}: resuming at step {start}/{steps}")
     for step in range(start, steps):
         for b in batches[step * grad_accum:(step + 1) * grad_accum]:
             ids, mask, labels = collate([enc[i] for i in b], pad, dev)

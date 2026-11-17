@@ -1,7 +1,7 @@
-"""노트북 22의 갈래 하나(구성·시드)를 한 GPU에서 학습·평가한다.
+"""Train and evaluate one arm (config and seed) on a single GPU.
 
-노트북이 학습 문항·평가 셋을 pickle로 남기면, 갈래마다 이 모듈을 하위 프로세스로 띄워 GPU에 나눈다.
-fla의 Triton 자동 튜너가 스레드 안전하지 않아 한 프로세스에서 여러 GPU를 쓰지 않는다.
+The caller pickles the training items and eval sets; this module is then launched as a subprocess per arm to spread arms across GPUs.
+fla's Triton autotuner is not thread-safe, so one process never uses several GPUs.
 
     python -m humm.fast.seed_worker --inputs results/fast_v2_seeds/inputs.pkl --cfg story-gold --seed 1 --device cuda:0
 """
@@ -41,7 +41,7 @@ def run_arm(inputs: dict, cfg: str, seed: int, device: str, out: Path = OUT, lor
     temps = calibrate(judge, inputs["dev_items"])
     (out / f"temperature_{name}.json").write_text(json.dumps(temps, indent=1))
     res = pd.concat([predict(judge, its).assign(set=s) for s, its in inputs["sets"].items()], ignore_index=True)
-    tmp = out / f"pred_{name}.csv.tmp"  # 다 쓴 뒤에만 pred_*.csv가 생겨 끝난 갈래로 친다
+    tmp = out / f"pred_{name}.csv.tmp"  # pred_*.csv appears only after the write completes, so it marks a finished arm
     res.assign(model=name, logits=res.logits.map(lambda z: json.dumps(np.round(z, 4).tolist())), probs=res.probs.map(lambda p: json.dumps(np.round(p, 6).tolist())))[
         ["model", "set", "id", "task", "kind", "tkey", "logits", "probs", "target_idx", "pred"]].to_csv(tmp, index=False)
     tmp.rename(out / f"pred_{name}.csv")
@@ -56,7 +56,7 @@ def main(argv=None):
     ap.add_argument("--device", default="cuda:0")
     a = ap.parse_args(argv)
     inputs = pickle.loads(Path(a.inputs).read_bytes())
-    print(run_arm(inputs, a.cfg, a.seed, a.device), "끝", flush=True)
+    print(run_arm(inputs, a.cfg, a.seed, a.device), "done", flush=True)
 
 
 if __name__ == "__main__":

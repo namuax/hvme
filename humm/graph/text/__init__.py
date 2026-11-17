@@ -1,4 +1,4 @@
-"""텍스트(비정형) → 인과 그래프(HCG) (Step 6)."""
+"""Text (unstructured) -> causal graph (HCG)."""
 from .aggregate import aggregate
 from .canonical import canonicalize
 from .evaluate import evaluate, gold_ids

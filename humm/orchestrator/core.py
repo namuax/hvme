@@ -1,7 +1,7 @@
-"""오케스트레이터 v0: 질의 분석 → 그래프 확보 → 검증 → 식별 → 추정 → 반박 → 민감도 → 설명.
+"""Orchestrator v0: query analysis -> graph acquisition -> validation -> identification -> estimation -> refutation -> sensitivity -> explanation.
 
-graph_llm: 그래프 구축(텍스트 추출·정규화·검증, 정형 사전지식)에 쓰는 공급자
-llm:       질의 분석과 설명 요약에 쓰는 범용 LLM. None이면 규칙 기반 분석과 템플릿 설명만 쓴다.
+graph_llm: provider used for graph construction (text extraction, canonicalization, verification, tabular prior)
+llm:       general-purpose LLM used for query analysis and explanation summaries. If None, only rule-based analysis and template explanations are used.
 """
 import re
 from dataclasses import dataclass, replace
@@ -22,11 +22,11 @@ from .route import lm_verify, verify_markdown
 class Answer:
     analysis: Analysis
     markdown: str
-    narrative: str = ""  # 검사를 통과한 LLM 요약(없으면 빈 문자열)
-    draft: str = ""  # LLM이 쓴 요약 원문
-    issues: list | None = None  # 요약 검사 결과. None이면 LLM 요약을 쓰지 않았다
-    route: dict | None = None  # v1 질의 분석(Rung, 확신도, fast/lm)
-    check: dict | None = None  # v1 Humm-LM 검증
+    narrative: str = ""  # LLM summary that passed the check (empty string if none)
+    draft: str = ""  # raw summary written by the LLM
+    issues: list | None = None  # summary check result. None means no LLM summary was used
+    route: dict | None = None  # v1 query analysis (Rung, confidence, fast/lm)
+    check: dict | None = None  # v1 Humm-LM verification
 
     def to_dict(self) -> dict:
         a = self.analysis
@@ -39,7 +39,7 @@ class Answer:
 
 def acquire(df: pd.DataFrame, docs: list[dict] | None = None, domain: str = "", graph_llm=None, column_aliases: dict | None = None,
             graph_id: str = "graph", table_kw: dict | None = None, text_kw: dict | None = None) -> tuple[HCG, dict]:
-    """그래프 확보: 정형 데이터 → HCG, (문서가 있으면) 텍스트 → HCG, 두 그래프 병합. 검증 전 그래프와 중간 결과를 돌려준다."""
+    """Graph acquisition: tabular data -> HCG, (if documents are given) text -> HCG, then merge the two graphs. Returns the pre-validation graph and intermediate results."""
     tab = tabular_to_hcg(df, f"{graph_id}-data", domain, provider=None, **{"n_boot": 10, "validate_kw": {"n_perm": 0}} | (table_kw or {}))
     if not docs:
         return tab.hcg, {"table": tab}
@@ -51,9 +51,9 @@ def acquire(df: pd.DataFrame, docs: list[dict] | None = None, domain: str = "", 
 class Orchestrator:
     def __init__(self, hcg: HCG, df: pd.DataFrame, llm=None, time: dict | None = None, experiments: dict | None = None,
                  n_perm: int = 100, n_boot: int = 200, n_boot_scm: int = 30, narrate: bool = True, router=None, verifier=None):
-        """experiments: {무작위 배정한 처치 변수: 실험 데이터}. 그 처치에 대한 질문에는 L4 실험 대조를 붙인다.
-        router(v1):   route.QueryRouter. 유형 키워드가 없는 질문의 유형을 Humm-Fast Rung 분류(저신뢰면 Humm-LM)로 정한다.
-        verifier(v1): Humm-LM 공급자(HFProvider). ate·ett·mediation 질문에 LM 독립 풀이와 엔진 부호 대조를 붙인다."""
+        """experiments: {randomized treatment variable: experiment data}. Questions about that treatment get an L4 experiment comparison.
+        router(v1):   route.QueryRouter. For questions without a kind keyword, the kind is decided by Humm-Fast Rung classification (Humm-LM if low confidence).
+        verifier(v1): Humm-LM provider (HFProvider). For ate/ett/mediation questions, adds an independent LM solution and a comparison with the engine sign."""
         self.hcg, self.df, self.llm, self.experiments = hcg, df, llm, experiments or {}
         self.n_boot, self.n_boot_scm, self.use_narrate = n_boot, n_boot_scm, narrate
         self.router, self.verifier = router, verifier

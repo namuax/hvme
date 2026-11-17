@@ -18,6 +18,6 @@ def test_cache_and_replay(tmp_path):
     c = CachedProvider(inner, tmp_path / "m.json")
     assert c.complete(["a", "b"]) == ["A", "B"] and c.complete(["b", "c"]) == ["B", "C"]
     assert c.option_probs(["q"], ["A", "B"]) == [[0.7, 0.3]] and c.option_probs(["q"], ["A", "B"]) == [[0.7, 0.3]]
-    assert inner.calls == 4  # a, b, c, q 한 번씩만 호출
+    assert inner.calls == 4  # a, b, c, q each called once
     r = ReplayProvider(c.save(), name="m")
     assert r.complete(["c"]) == ["C"] and r.option_probs(["q"], ["A", "B"]) == [[0.7, 0.3]]

@@ -1,6 +1,6 @@
-"""일반 능력 점검(MATH-500·KMMLU): 인과 학습이 일반 능력을 깎지 않았는지 본다(Step 9 완료 기준: 기반 대비 하락 2pt 이내).
+"""General-ability check (MATH-500, KMMLU): verify that causal training did not erode general ability (criterion: at most 2pt drop from the base model).
 
-채점은 기반 모델과 학습 모델에 똑같이 적용하는 단순 규칙이다. 절대 점수보다 두 모델의 차이를 본다.
+Scoring is a simple rule applied identically to the base and trained models. The difference between the two matters more than absolute scores.
 """
 import re
 
@@ -10,7 +10,7 @@ CHOICE = re.compile(r"final answer\s*[:：]?\s*\**\s*\(?([ABCD])\b", re.I)
 
 
 def boxed(text: str) -> str | None:
-    """마지막 \\boxed{...}의 내용(중괄호 짝을 맞춘다)."""
+    """Contents of the last \\boxed{...} (matching braces)."""
     i = text.rfind("\\boxed{")
     if i < 0:
         return None
@@ -37,7 +37,7 @@ def math_correct(out: str, answer: str) -> bool:
 
 
 def parse_choice(out: str) -> int:
-    """'Final answer: X'의 보기 번호 1~4, 없으면 -1."""
+    """Option number 1-4 from 'Final answer: X', or -1 if absent."""
     hits = CHOICE.findall(out)
     return "ABCD".index(hits[-1].upper()) + 1 if hits else -1
 
@@ -46,7 +46,7 @@ PROB = re.compile(r'\{[^{}]*"prob"\s*:\s*"?(-?[0-9.]+)"?[^{}]*\}', re.I)
 
 
 def caugym_correct(out: str, answer: str) -> bool:
-    """CauGym 채점(eval/sample_evaluate.py): 출력의 JSON 중 PROB 하나라도 정답과 0.0005 안이면 맞다. insufficient는 LACK_CONDITION을 썼는지 본다."""
+    """CauGym scoring: correct if any PROB in the output JSON is within 0.0005 of the answer. For insufficient, checks whether LACK_CONDITION was written."""
     if answer == "LACK_CONDITION":
         return "LACK_CONDITION" in out
     gold = float(PROB.search(answer).group(1))

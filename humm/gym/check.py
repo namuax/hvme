@@ -1,4 +1,4 @@
-"""저장된 문항의 정답 재검증. 문항에 남긴 그래프·확률표·메타만으로 엔진 계산을 다시 해 label과 value를 대조한다."""
+"""Re-verify stored answers: recompute with the engine from only the graph, probability tables and meta saved in the item, then compare label and value."""
 import networkx as nx
 import numpy as np
 
@@ -26,23 +26,23 @@ VALUE = {
 
 
 def _bits(q: dict) -> dict:
-    """JSON으로 저장된 v3 엔진 질의(meta.q)의 값을 정수로 되돌린다."""
+    """Restore the values of a v3 engine query (meta.q) stored as JSON back to integers."""
     return {k: ({a: int(b) for a, b in v.items()} if isinstance(v, dict) else v) for k, v in q.items()}
 
 
 def recompute_label(d: dict) -> int:
     t, c = d["query_type"], d["meta"]
     g = nx.DiGraph([tuple(e) for e in d["graph"]])
-    if t == "ancestry":  # v3.8: 부모·조상
+    if t == "ancestry":  # parents and ancestors
         from .ancestry import recompute
         return recompute(d)
-    if t == "graphid":  # v3.9: 앞문·도구변수·교란 쌍 식별
+    if t == "graphid":  # front-door, instrumental variable, confounded-pair identification
         from .graphid import recompute
         return recompute(d)
-    if d["kind"] == "prob":  # v3.7: 저장한 엔진 호출을 다시 돌린다
+    if d["kind"] == "prob":  # re-run the stored engine call
         from .prob import recompute
         return recompute(d)
-    if "q" in c:  # v3 수치 질의: 값 = 처치 세계 − 기준 세계
+    if "q" in c:  # numeric query: value = treated world minus baseline world
         from ..lm.tools import evaluate
         return int((evaluate(_scm(d), _bits(c["q"]))[0] > 0) == (c["direction"] == "up"))
     if t == "det_cf":
@@ -66,7 +66,7 @@ def recompute_label(d: dict) -> int:
     if t == "identify":
         g.add_nodes_from(d["latent"])
         return c["option_order"].index(identify(g, c["x"], c["y"], set(d["latent"])).strategy)
-    if t == "corr2cause" and "call" in c:  # v3.3: 변수 6개까지, 원 벤치 가설 정의
+    if t == "corr2cause" and "call" in c:  # up to 6 variables, original-benchmark hypothesis definition
         g.add_nodes_from(c["names"])
         return int(all(holds(c["hypothesis"], m, c["a"], c["b"]) for m in mec_of(g)))
     if t == "corr2cause":
@@ -76,5 +76,5 @@ def recompute_label(d: dict) -> int:
 
 
 def audit(items: list[dict]) -> list[str]:
-    """정답이 재계산 결과와 다른 문항의 id 목록. 비어 있어야 한다."""
+    """IDs of items whose answer differs from the recomputed result. Should be empty."""
     return [d["id"] for d in items if recompute_label(d) != d["label"]]

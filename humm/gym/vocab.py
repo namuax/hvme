@@ -1,6 +1,6 @@
-"""변수 어휘. 각 항목은 (한국어 이름, 한국어 1 상태, 한국어 0 상태, 영어 이름, 영어 1 상태, 영어 0 상태).
+"""Variable vocabulary. Each entry is (Korean name, Korean state 1, Korean state 0, English name, English state 1, English state 0).
 
-학습/테스트 분리: 학습은 marketing·manufacturing·medical, 테스트는 it_ops와 무의미 이름(nonsense)을 쓴다.
+Train/test split: training uses marketing, manufacturing and medical; testing uses it_ops and meaningless names (nonsense).
 """
 import string
 
@@ -70,7 +70,7 @@ TEST_DOMAINS = ["it_ops", "nonsense"]
 
 
 def nonsense(n: int, rng: np.random.Generator) -> list[tuple]:
-    """CLadder식 무의미 변수명. 상식으로 답을 짐작할 수 없게 한다."""
+    """CLadder-style meaningless variable names, so the answer cannot be guessed from common sense."""
     names = set()
     while len(names) < n:
         names.add("".join(rng.choice(list(string.ascii_lowercase), 4)))
@@ -78,6 +78,6 @@ def nonsense(n: int, rng: np.random.Generator) -> list[tuple]:
 
 
 def sample_vars(domain: str, n: int, rng: np.random.Generator) -> list[tuple]:
-    """도메인 어휘에서 n개를 뽑는다. 순서가 무작위이므로 상식적 인과 방향과 그래프가 맞지 않을 수 있다(상식 단축 방지)."""
+    """Draw n entries from the domain vocabulary. The order is random, so the graph may disagree with the commonsense causal direction (prevents commonsense shortcuts)."""
     pool = nonsense(n, rng) if domain == "nonsense" else DOMAINS[domain]
     return [pool[i] for i in rng.choice(len(pool), n, replace=False)]

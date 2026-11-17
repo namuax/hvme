@@ -1,10 +1,10 @@
-"""Humm-Fast 학습·평가 문항.
+"""Humm-Fast training and evaluation items.
 
-문항 = {"id", "prompt", "labels"(답 토큰), "target"(labels 위의 목표 분포), "kind"(noul·choice·score), "task", "lang", "source"}.
-- gym: Humm-Gym direct 형식(정답 라벨, 원-핫)
-- pairwise: 엣지 방향 Choice. Step 5 정형 파이프라인의 쌍별 질의(PAIR_PROMPT)와 같은 문장이라 학습한 모델을 그대로 끼울 수 있다
-- verify: 반사실 의존 Noul. Step 6 텍스트 파이프라인의 L3 검증(VERIFY_PROMPT)과 같은 문장
-target에 원-핫이 아닌 분포를 넣으면 연성 라벨로 학습한다(손실은 같은 교차 엔트로피).
+Item = {"id", "prompt", "labels"(answer tokens), "target"(target distribution over labels), "kind"(noul·choice·score), "task", "lang", "source"}.
+- gym: Humm-Gym direct format (hard label, one-hot)
+- pairwise: edge-direction Choice. Same wording as the pairwise query (PAIR_PROMPT) of the tabular pipeline, so a trained model can be plugged in directly
+- verify: counterfactual-dependence Noul. Same wording as the L3 verification (VERIFY_PROMPT) of the text pipeline
+A non-one-hot distribution in target trains as a soft label (same cross-entropy loss).
 """
 import networkx as nx
 import numpy as np
@@ -29,7 +29,7 @@ def _desc(name: str, v: str) -> str:
 
 
 def pairwise_items(name: str, g: nx.DiGraph, seed: int = 0) -> list[dict]:
-    """참 엣지마다 방향 질의 하나. 두 변수를 쓰는 순서는 무작위라 정답이 A·B 반반이다."""
+    """One direction query per true edge. The order of the two variables is random, so the answer is split evenly between A and B."""
     rng = np.random.default_rng(seed)
     out = []
     for i, (u, v) in enumerate(sorted(g.edges)):
@@ -42,7 +42,7 @@ def pairwise_items(name: str, g: nx.DiGraph, seed: int = 0) -> list[dict]:
 
 
 def verify_items(name: str, g: nx.DiGraph, n: int = 200, seed: int = 0) -> list[dict]:
-    """조상 → 자손이면 '예'(반사실 의존), 자손 → 조상이거나 서로 무관하면 '아니오'. 예·아니오 반반으로 뽑는다."""
+    """Ancestor → descendant gives 'yes' (counterfactual dependence); descendant → ancestor or unrelated gives 'no'. Sampled half yes, half no."""
     rng = np.random.default_rng(seed)
     anc = {v: nx.ancestors(g, v) for v in g}
     yes = sorted((a, b) for b in g for a in anc[b])

@@ -1,4 +1,4 @@
-"""L2 데이터 반증: 그래프가 함의하는 조건부 독립을 데이터로 검정한다."""
+"""L2 data falsification: test the conditional independences the graph implies against data."""
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -8,7 +8,7 @@ from .ci import CITester
 
 
 def lmc_tests(g: nx.DiGraph, ci: CITester, alpha: float = 0.05) -> pd.DataFrame:
-    """국소 마르코프 조건: 각 노드 v와 부모가 아닌 비자손 w에 대해 v ⫫ w | pa(v) 를 검정한다. 관측되지 않은 변수가 낀 검정은 건너뛴다."""
+    """Local Markov condition: for each node v and non-parent non-descendant w, test v ⫫ w | pa(v). Tests involving unobserved variables are skipped."""
     cols = set(ci.df.columns)
     rows = [(v, w, sorted(pa), ci(v, w, pa)) for v, rest, pa in local_markov(g) for w in sorted(rest) if {v, w} | pa <= cols]
     df = pd.DataFrame(rows, columns=["node", "other", "given", "p"])
@@ -16,9 +16,9 @@ def lmc_tests(g: nx.DiGraph, ci: CITester, alpha: float = 0.05) -> pd.DataFrame:
 
 
 def permutation_test(g: nx.DiGraph, ci: CITester, n_perm: int = 100, alpha: float = 0.05, seed: int = 0) -> dict:
-    """노드 이름을 무작위로 바꾼 그래프들과 LMC 위반 비율을 비교한다(Eulig et al., 2023).
+    """Compare the LMC violation rate with graphs whose node names are randomly permuted (Eulig et al., 2023).
 
-    p_value = 위반 비율이 주어진 그래프 이하인 무작위 그래프의 비율. 작을수록(예: < 0.05) 그래프가 데이터에 대해 정보를 가진다.
+    p_value = fraction of random graphs whose violation rate is at most the given graph's. The smaller (e.g. < 0.05), the more informative the graph is about the data.
     """
     rng = np.random.default_rng(seed)
     rate = lambda h: float(lmc_tests(h, ci, alpha).violated.mean()) if h.number_of_nodes() else 0.0
@@ -30,7 +30,7 @@ def permutation_test(g: nx.DiGraph, ci: CITester, n_perm: int = 100, alpha: floa
 
 
 def edge_tests(g: nx.DiGraph, ci: CITester, alpha: float = 0.05) -> pd.DataFrame:
-    """엣지 u → v 가 데이터로 뒷받침되는가: v의 다른 부모를 조건으로 u와 v가 여전히 의존적이어야 한다."""
+    """Whether edge u → v is supported by data: u and v must remain dependent given the other parents of v."""
     cols = set(ci.df.columns)
     rows = [(u, v, sorted(set(g.predecessors(v)) - {u}), ci(u, v, set(g.predecessors(v)) - {u}))
             for u, v in g.edges if {u, v} | set(g.predecessors(v)) <= cols]
@@ -44,7 +44,7 @@ def _entropy(p: np.ndarray) -> float:
 
 
 def mechanism_fit(g: nx.DiGraph, df: pd.DataFrame, discrete: bool) -> pd.DataFrame:
-    """노드별로 부모가 그 노드를 얼마나 설명하는가. 이산: 정보 이득(비트) = H(v) - H(v|부모), 연속: 선형 회귀 R²."""
+    """How well each node's parents explain it. Discrete: information gain (bits) = H(v) - H(v|parents); continuous: linear regression R²."""
     rows = []
     for v in [n for n in nx.topological_sort(g) if n in df]:
         pa = [p for p in g.predecessors(v) if p in df]

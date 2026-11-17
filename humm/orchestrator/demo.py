@@ -1,9 +1,9 @@
-"""E2E 데모 시나리오. 정답 SCM에서 관찰 데이터·실험 데이터·문서 코퍼스를 함께 만든다.
+"""E2E demo scenarios. Generates observational data, experiment data and a document corpus from a ground-truth SCM.
 
-- marketing: 성수기(season)가 광고비·할인·매출을 함께 움직이는 교란 변수이고, 광고비 효과의 일부는 웹 방문을 거친다.
-- manufacturing(제조 품질, Step 11): 설비 노후도가 예방 정비와 불량률을 함께 올리는 교란 변수다. 정비의 효과는 모두 설비 진동을 거쳐 불량률을 낮추므로,
-  관찰 상관은 약하거나 반대로 보일 수 있다.
-- it_ops(IT 운영 장애 원인 분석, Step 11): 요청 트래픽이 설정 변경과 지연·장애를 함께 움직이는 교란 변수다. 설정 변경 효과의 대부분은 오류율을 거친다.
+- marketing: peak season (season) is a confounder that moves ad spend, discounts and sales together; part of the ad-spend effect goes through web visits.
+- manufacturing (manufacturing quality): equipment age is a confounder that raises both preventive maintenance and defect rate. The effect of maintenance lowers the defect rate entirely through machine vibration, so
+  the observed correlation can look weak or even reversed.
+- it_ops (IT operations incident root-cause analysis): request traffic is a confounder that moves config changes, latency and outages together. Most of the config-change effect goes through the error rate.
 """
 import json
 from dataclasses import dataclass, field
@@ -16,8 +16,8 @@ import pandas as pd
 from ..engine import BinarySCM
 from ..graph.text import TEXT_VOCAB, Corpus, make_corpus
 
-# 도메인마다 (원인, 결과, 부호, 로짓 가중치), 노드 절편, 질문, 질문별 기대 해석(유형, 처치, 결과, 정답 키), 정답 정의, 실험 처치.
-# 정답 정의: ("ate", x, y) | ("nie"|"nde", x, y, 매개) | ("ett", x, y) | ("zero",)
+# Per domain: (cause, effect, sign, logit weight), node intercepts, questions, expected interpretation per question (kind, treatment, outcome, truth key), truth definitions, experiment treatment.
+# Truth definition: ("ate", x, y) | ("nie"|"nde", x, y, mediator) | ("ett", x, y) | ("zero",)
 SPECS = {
     "marketing": dict(
         edges=[("season", "ad_spend", "+", 1.6), ("season", "discount", "+", 1.2), ("season", "sales", "+", 1.4),
@@ -75,7 +75,7 @@ SPECS = {
                "leak_on_error": ("ate", "memory_leak", "error_rate")},
         treatment="config_change"),
 }
-EDGES, BIAS, QUESTIONS, EXPECTED = (SPECS["marketing"][k] for k in ("edges", "bias", "questions", "expected"))  # v0 이름(노트북 08)
+EDGES, BIAS, QUESTIONS, EXPECTED = (SPECS["marketing"][k] for k in ("edges", "bias", "questions", "expected"))  # v0 names (notebook 08)
 
 
 @dataclass
@@ -83,7 +83,7 @@ class Scenario:
     graph: nx.DiGraph
     scm: BinarySCM
     data: pd.DataFrame
-    experiment: pd.DataFrame  # 실험 처치(spec["treatment"])를 무작위 배정한 A/B 테스트
+    experiment: pd.DataFrame  # A/B test with the experiment treatment (spec["treatment"]) randomly assigned
     corpus: Corpus
     column_aliases: dict
     domain: str = "marketing"
@@ -98,7 +98,7 @@ class Scenario:
         return self.spec["expected"]
 
     def save(self, folder: str | Path) -> dict:
-        """MCP·API용 파일로 저장한다: data.csv, experiment.csv, docs.jsonl, aliases.json."""
+        """Save as files for MCP/API use: data.csv, experiment.csv, docs.jsonl, aliases.json."""
         folder = Path(folder)
         folder.mkdir(parents=True, exist_ok=True)
         files = {k: folder / f for k, f in [("csv", "data.csv"), ("experiment_csv", "experiment.csv"), ("docs", "docs.jsonl"), ("aliases", "aliases.json")]}
@@ -109,14 +109,14 @@ class Scenario:
         return {k: str(v) for k, v in files.items()}
 
     def truth(self) -> dict:
-        """정답 키별 값(정답 SCM에서 정확히 계산)."""
+        """Value per truth key (computed exactly from the ground-truth SCM)."""
         s = self.scm
         calc = {"ate": lambda x, y: s.ate(x, y), "ett": lambda x, y: s.ett(x, y), "nie": lambda x, y, m: s.nie(x, y, m), "nde": lambda x, y, m: s.nde(x, y, m)}
         return {k: 0.0 if d[0] == "zero" else calc[d[0]](*d[1:]) for k, d in self.spec["truth"].items()}
 
 
 def logistic_cpt(g: nx.DiGraph, weights: dict, bias: dict) -> dict:
-    """P(v=1 | 부모) = σ(bias + Σ w·부모). 부모는 이름순, i번째 부모가 비트 i (BinarySCM 규약)."""
+    """P(v=1 | parents) = sigmoid(bias + sum of w * parent). Parents are in name order; the i-th parent is bit i (BinarySCM convention)."""
     cpt = {}
     for v in g.nodes:
         pa = sorted(g.predecessors(v))
@@ -146,7 +146,7 @@ def marketing(n: int = 8000, n_exp: int = 3000, lang: str = "ko", n_docs: int = 
 
 
 def scorecard(answers, scenario: Scenario) -> pd.DataFrame:
-    """질문별 해석 정확도, 대표 수치와 정답의 차이, 구간 포함 여부, 민감도·실험 대조 요약."""
+    """Per-question interpretation accuracy, difference between the headline number and the truth, whether the interval covers it, and a summary of sensitivity and experiment comparison."""
     truth = scenario.truth()
     rows = []
     for ans, (kind, x, y, key) in zip(answers, scenario.expected):

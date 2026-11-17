@@ -62,6 +62,8 @@ api.engine_counterfactual("marketing", "data.csv", "ad_spend", "sales", "nie", [
 api.ask("광고비를 늘리면 매출이 오르는가?", "marketing", "data.csv")
 ```
 
+Examples: [`01_quickstart.py`](examples/01_quickstart.py) (full chain, no GPU) · [`02_graph_from_table.py`](examples/02_graph_from_table.py) · [`03_gym_generate.py`](examples/03_gym_generate.py) · [MCP setup](examples/04_mcp_server.md) · [vLLM serving](examples/05_serve_vllm.md)
+
 MCP server (17 tools: `graph_*`, `validate_run`, `engine_*`, `ask`, `fast_*`, `classify_question`, `lm_verify`, `ask_v1`):
 
 ```bash
@@ -77,19 +79,19 @@ HUMM_LM_URL=http://127.0.0.1:8011/v1 HUMM_LM=<model> python -c "from humm import
 
 ## Results
 
-Measured on our own runs. The 9B model is Qwen3.5-9B fine-tuned with LoRA on engine-verified tool trajectories (tool mode: the model calls the engine). The base model answers without tools.
+Measured on our own runs; the raw numbers are in [`bench/`](bench/). The 9B model is Qwen3.5-9B fine-tuned with LoRA on engine-verified tool trajectories (tool mode: the model calls the engine). The base model answers without tools.
 
 | Benchmark | Base Qwen3.5-9B (no tools) | humm 9B |
 |---|---|---|
 | CaLM-lite (45 English tasks × 30) | 51.0 | **91.5** |
 | CauGym (6 sets × 7 types × 15) | 31.3 | **75.6** |
 | Target metric (mean of the two above) | 41.1 | **83.6** |
-| CLadder (150, tool mode) | 86.7 | **90.7** |
+| CLadder 150 (base: CausalCoT 8k, humm: tool mode) | 86.7 | **90.7** |
 | Corr2Cause (300, F1) | — | **0.923** |
 | KoCLadder (528, Korean, machine-translated) | — | 0.758 (English same items 0.907) |
 | KoCorr2Cause (1,157, Korean, machine-translated) | — | 0.963 |
 
-Single-pass judge (Qwen3.5-4B, one forward pass, calibrated): CLadder 600 0.845, CauGym yes/no 2,500 0.752. Rung router: CLadder Rung 0.992, KoCLadder Rung 0.983.
+Single-pass judge (Qwen3.5-4B, one forward pass, calibrated): CLadder 600 0.843, CauGym yes/no 2,500 0.751. Rung router: CLadder Rung 0.992, KoCLadder Rung 0.983.
 
 General ability is kept: MATH-500 and KMMLU stay within about 1 point of the base model.
 
@@ -97,13 +99,9 @@ Caveats: the Korean sets are machine translations that passed automatic checks (
 
 ## How it works
 
-```
- table ─┐                         ┌─ validate (L1 structure, L2 data falsification, L4 experiment)
-        ├─> HCG (causal DAG) ─────┤
- docs  ─┘   edges + evidence      └─ engine: identify · estimate · refute · counterfactual (ATE, CDE, ETT, NDE, NIE, PN, PS)
-                                         ▲
- question ─> router (Rung 1/2/3) ─> LM (tool calls: causal_engine, causal_graph, causal_discovery) ─> answer + paths + assumptions
-```
+![How humm answers a causal question](assets/architecture.svg)
+
+More: [architecture](docs/architecture.md) · [HCG format](docs/hcg.md) · [engine](docs/engine.md) · [LM tools](docs/tools.md) · [training](docs/training.md) · [evaluation](docs/evaluation.md)
 
 | Package | Role |
 |---|---|

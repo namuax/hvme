@@ -1,10 +1,10 @@
-"""합성 텍스트 코퍼스: 정답 DAG에서 문서를 만든다. 텍스트 → 인과 그래프 파이프라인의 정답 있는 평가셋이다.
+"""Synthetic text corpus: generate documents from a ground-truth DAG. An evaluation set with ground truth for the text -> causal graph pipeline.
 
-문서에 섞이는 것
-- 변수마다 2~3개의 표현(동의어): 정규화(canonicalization)를 시험한다
-- 인과 문형(증가·감소, 능동·수동, 원인 접속 표현), 불확실 표현("~할 수도 있다")
-- 방해 문장: 상관 진술(인과 아님), 무효과 진술(엣지 없음), 관계없는 문장
-- 오류 문서: 방향을 뒤집거나 없는 엣지를 주장한다(집계 단계가 걸러야 한다)
+What is mixed into the documents
+- 2-3 expressions (synonyms) per variable: tests canonicalization
+- Causal sentence patterns (increase/decrease, active/passive, causal connectives) and hedged expressions ("~할 수도 있다")
+- Distractor sentences: correlation statements (not causal), no-effect statements (no edge), irrelevant sentences
+- Erroneous documents: flip a direction or claim a nonexistent edge (the aggregation stage must filter these out)
 """
 from dataclasses import dataclass, field
 
@@ -13,7 +13,7 @@ import numpy as np
 
 from ...gym.verbalize import josa
 
-# (정규 id, 한국어 표현들, 영어 표현들). 도메인마다 그럴듯한 인과 순서(앞 → 뒤)로 나열했다. 정답 엣지는 이 순서를 따른다.
+# (canonical id, Korean expressions, English expressions). Listed per domain in a plausible causal order (earlier -> later). Ground-truth edges follow this order.
 TEXT_VOCAB = {
     "marketing": [
         ("season", ["계절 수요", "성수기 수요"], ["seasonal demand", "peak-season demand"]),
@@ -57,7 +57,7 @@ FILLER = {
 
 
 def _ko(kind, a, b):
-    """한국어 문형. a=원인, b=결과."""
+    """Korean sentence patterns. a = cause, b = effect."""
     return {
         "up": [f"{josa(a, '이')} 늘면 {b}도 증가한다.", f"{josa(a, '은')} {josa(b, '을')} 높인다.", f"{josa(b, '은')} {a} 때문에 올라간다.",
                f"{josa(a, '이')} 증가하면서 {josa(b, '이')} 커졌다.", f"{a} 증가가 {b} 상승으로 이어진다."],
@@ -89,14 +89,14 @@ def _en(kind, a, b):
 class Corpus:
     domain: str
     lang: str
-    graph: nx.DiGraph  # 정규 id 기준 정답 DAG, 엣지 속성 sign
+    graph: nx.DiGraph  # ground-truth DAG over canonical ids; edge attribute sign
     docs: list  # [{"id", "text", "noisy"}]
-    aliases: dict  # 표현 → 정규 id
-    annotations: dict = field(default_factory=dict)  # 문장 → 정답 주장(가상 LLM과 오류 분석용)
+    aliases: dict  # expression -> canonical id
+    annotations: dict = field(default_factory=dict)  # sentence -> ground-truth claim (for the simulated LLM and error analysis)
 
     @property
     def names(self) -> dict:
-        """정규 id → 대표 표현(첫 번째 별칭)."""
+        """canonical id -> representative expression (first alias)."""
         out = {}
         for s, c in self.aliases.items():
             out.setdefault(c, s)
@@ -105,12 +105,12 @@ class Corpus:
 
 def make_corpus(domain: str, lang: str = "ko", n_docs: int = 12, n_edges: int = 9, mentions: int = 3, noisy_docs: float = 0.15,
                 seed: int = 0, graph: nx.DiGraph | None = None) -> Corpus:
-    """graph: 정답 DAG를 직접 준다(엣지 속성 sign). 주지 않으면 도메인 순서를 따르는 엣지 n_edges개를 무작위로 뽑는다."""
+    """graph: pass the ground-truth DAG directly (edge attribute sign). If not given, n_edges random edges following the domain order are drawn."""
     rng = np.random.default_rng(seed)
     vocab = TEXT_VOCAB[domain]
     ids = [v[0] for v in vocab]
     alias = {v[0]: (v[1] if lang == "ko" else v[2]) for v in vocab}
-    pairs = [(ids[i], ids[j]) for i in range(len(ids)) for j in range(i + 1, len(ids))]  # 그럴듯한 순서를 따르는 쌍만
+    pairs = [(ids[i], ids[j]) for i in range(len(ids)) for j in range(i + 1, len(ids))]  # only pairs that follow the plausible order
     g = nx.DiGraph()
     g.add_nodes_from(ids)
     for k in (rng.permutation(len(pairs))[:n_edges] if graph is None else []):
@@ -119,7 +119,7 @@ def make_corpus(domain: str, lang: str = "ko", n_docs: int = 12, n_edges: int = 
     non_edges = [(a, b) for a in ids for b in ids if a != b and not g.has_edge(a, b) and not g.has_edge(b, a)]
     templ = _ko if lang == "ko" else _en
     def say(kind, a, b, **note):
-        """문장 하나를 만들고 정답 주장(표면 표현 포함)을 기록한다."""
+        """Build one sentence and record its ground-truth claim (including surface expressions)."""
         sa, sb = str(rng.choice(alias[a])), str(rng.choice(alias[b]))
         s = str(rng.choice(templ(kind, sa, sb)))
         notes[s] = {"cause": a, "effect": b, "cause_text": sa, "effect_text": sb, "hedged": False, "polarity": "?"} | note
@@ -127,18 +127,18 @@ def make_corpus(domain: str, lang: str = "ko", n_docs: int = 12, n_edges: int = 
 
     docs, notes = [[] for _ in range(n_docs)], {}
     g = nx.relabel_nodes(g, str)
-    for a, b, d in g.edges(data=True):  # 참 엣지마다 mentions개 문서에 등장
+    for a, b, d in g.edges(data=True):  # each true edge appears in `mentions` documents
         for doc in rng.choice(n_docs, mentions, replace=False):
             kind = "hedge" if rng.random() < 0.15 else ("up" if d["sign"] == "+" else "down")
             docs[doc].append(say(kind, a, b, relation="causal", polarity=d["sign"] if kind != "hedge" else "?", hedged=kind == "hedge"))
-    for doc in range(n_docs):  # 방해 문장: 상관·무효과·관계없는 문장
+    for doc in range(n_docs):  # distractor sentences: correlation, no-effect, irrelevant
         a, b = list(g.edges)[rng.integers(g.number_of_edges())]
         docs[doc].append(say("corr", a, b, relation="correlational"))
         a, b = non_edges[rng.integers(len(non_edges))]
         docs[doc].append(say("none", a, b, relation="no_effect"))
         docs[doc] += list(rng.choice(FILLER[lang], 2, replace=False))
     noisy = set(rng.choice(n_docs, int(round(noisy_docs * n_docs)), replace=False).tolist())
-    for doc in noisy:  # 오류 문서: 뒤집힌 엣지 하나, 없는 엣지 하나를 주장한다
+    for doc in noisy:  # erroneous documents: claim one flipped edge and one nonexistent edge
         a, b = list(g.edges)[rng.integers(g.number_of_edges())]
         docs[doc].append(say("up", b, a, relation="causal", polarity="+", wrong=True))
         a, b = non_edges[rng.integers(len(non_edges))]

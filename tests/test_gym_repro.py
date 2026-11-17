@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# 생성기가 집합 순회(문자열 해시 순서)에 기대면 프로세스마다 다른 문항이 나온다(노트북 19에서 다시 쓴 문맥과 문항이 어긋났다)
+# if the generator relies on set iteration (string hash order), different processes produce different items (rewritten contexts then mismatched their items)
 SCRIPT = """
 import hashlib
 import numpy as np

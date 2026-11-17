@@ -1,4 +1,4 @@
-"""질의 하나의 분석: 식별 → 추정 → (반사실) → 반박 → 근거 경로 → 그래프 민감도(L5) → 가정 목록."""
+"""Analysis of a single query: identification -> estimation -> (counterfactual) -> refutation -> evidence paths -> graph sensitivity (L5) -> assumption list."""
 import re
 from dataclasses import dataclass, field
 
@@ -12,11 +12,11 @@ from ..graph.schema import HCG, EdgeStatus, EvidenceKind
 from .query import Query
 
 IDENTIFIED = ("backdoor", "frontdoor", "iv")
-MAIN = {"ate": "ate", "association": "ate", "mediation": "nie", "ett": "ett"}  # 유형별 대표 수치
+MAIN = {"ate": "ate", "association": "ate", "mediation": "nie", "ett": "ett"}  # headline number per kind
 
 
 def latent_of(g: nx.DiGraph, df: pd.DataFrame) -> list[str]:
-    """그래프에는 있지만 데이터 열이 없는 노드(텍스트에서만 나온 변수 등)는 관측되지 않은 변수로 다룬다."""
+    """Nodes that are in the graph but have no data column (e.g. variables that appear only in text) are treated as unobserved."""
     return sorted(set(g) - set(df.columns))
 
 
@@ -25,12 +25,12 @@ def mediators_of(q: Query, g: nx.DiGraph, df: pd.DataFrame) -> list[str]:
 
 
 def fit_scm(g: nx.DiGraph, df: pd.DataFrame, nodes) -> BinarySCM:
-    """관심 노드들의 관측된 조상만으로 이진 SCM을 적합한다."""
+    """Fit a binary SCM using only the observed ancestors of the nodes of interest."""
     keep = set().union(*(nx.ancestors(g, v) | {v} for v in nodes)) & set(df.columns)
     return BinarySCM.fit(nx.DiGraph(g.subgraph(sorted(keep))), df)
 
 
-# 유형별 핵심 수치. ate·association은 식별된 추정식, mediation·ett는 적합한 SCM에서 계산한다.
+# Key number per kind. ate/association come from the identified estimand; mediation/ett are computed on the fitted SCM.
 def _scm_values(q: Query, g: nx.DiGraph, df: pd.DataFrame) -> dict:
     x, y, m = q.treatment, q.outcome, mediators_of(q, g, df)
     scm = fit_scm(g, df, [x, y, *m])
@@ -41,7 +41,7 @@ def _scm_values(q: Query, g: nx.DiGraph, df: pd.DataFrame) -> dict:
 
 
 def headline(q: Query, g: nx.DiGraph, df: pd.DataFrame) -> float:
-    """민감도 분석에 쓰는 대표 수치."""
+    """Headline numbers used in the sensitivity analysis."""
     lat = latent_of(g, df)
     return {"ate": lambda: estimate(g, df, q.treatment, q.outcome, lat, n_boot=0).value,
             "association": lambda: estimate(g, df, q.treatment, q.outcome, lat, n_boot=0).value,
@@ -54,7 +54,7 @@ def association(df: pd.DataFrame, x: str, y: str) -> float:
 
 
 def bootstrap(fn, df: pd.DataFrame, n_boot: int, seed: int = 0) -> dict:
-    """fn(df) → {이름: 값}. 표본을 다시 뽑아 이름별 95% 구간을 낸다."""
+    """fn(df) -> {name: value}. Resamples the data and gives a 95% interval per name."""
     rng = np.random.default_rng(seed)
     point = fn(df)
     boots = pd.DataFrame([fn(df.iloc[rng.integers(0, len(df), len(df))]) for _ in range(n_boot)])
@@ -63,7 +63,7 @@ def bootstrap(fn, df: pd.DataFrame, n_boot: int, seed: int = 0) -> dict:
 
 
 def display_names(hcg: HCG, text: str = "") -> dict:
-    """id → 설명에 쓸 이름: 질문에 나온 표현 > 가장 짧은 한국어 별칭 > id."""
+    """id -> display name: expression used in the question > shortest Korean alias > id."""
     hangul = lambda w: bool(re.search("[가-힣]", w))
     out = {}
     for n in hcg.nodes:
@@ -73,7 +73,7 @@ def display_names(hcg: HCG, text: str = "") -> dict:
     return out
 
 
-# ---------- 근거 경로 ----------
+# ---------- evidence paths ----------
 def edge_info(e) -> dict:
     quote = next((x.span for x in e.evidence if x.kind == EvidenceKind.TEXT), "")
     return {"edge": f"{e.src}→{e.dst}", "status": e.status.value, "confidence": round(e.confidence, 3), "sign": e.sign,
@@ -81,25 +81,25 @@ def edge_info(e) -> dict:
 
 
 def evidence_paths(hcg: HCG, x: str, y: str, k: int = 5) -> list[list[dict]]:
-    """x에서 y로 가는 인과 경로(짧은 것부터 k개)와 경로 위 엣지의 상태·신뢰도·증거."""
+    """Causal paths from x to y (the k shortest) with the status, confidence and evidence of the edges on them."""
     g = hcg.to_networkx()
     paths = sorted(nx.all_simple_paths(g, x, y, cutoff=6), key=lambda p: (len(p), p))[:k]
     return [[edge_info(hcg.edge(u, v)) for u, v in zip(p, p[1:])] for p in paths]
 
 
 def backdoor_paths(g: nx.DiGraph, x: str, y: str, k: int = 3) -> list[list[str]]:
-    """x로 들어오는 화살표로 시작하는 x–y 경로(교란 경로 후보)."""
+    """x-y paths that start with an arrow into x (candidate confounding paths)."""
     u = g.to_undirected(as_view=True)
     paths = [p for p in nx.all_simple_paths(u, x, y, cutoff=6) if g.has_edge(p[1], x)]
     return sorted(paths, key=lambda p: (len(p), p))[:k]
 
 
-# ---------- L5: 그래프 민감도 ----------
+# ---------- L5: graph sensitivity ----------
 def alternatives(hcg: HCG, x: str, y: str, max_edges: int = 8):
-    """결론이 각 엣지에 얼마나 기대는지 보는 대안 그래프. verified 엣지도 틀릴 수 있으므로 상태와 관계없이 본다.
-    - x·y의 조상에 닿는 활성 엣지(신뢰도 낮은 순 max_edges개): 지운 그래프, 뒤집은 그래프(DAG이면)
-    - 반증된 엣지 중 반대 방향 엣지가 없는 것: 되살린 그래프(DAG이면)
-    - x와 y 사이에 관측되지 않은 공통 원인을 넣은 그래프"""
+    """Alternative graphs that show how much the conclusion depends on each edge. Verified edges can also be wrong, so status is ignored.
+    - active edges touching ancestors of x and y (max_edges, lowest confidence first): graph with the edge deleted, graph with it flipped (if still a DAG)
+    - refuted edges with no opposite-direction edge: graph with the edge restored (if a DAG)
+    - graph with an unobserved common cause added between x and y"""
     g = hcg.to_networkx()
     rel = nx.ancestors(g, x) | nx.ancestors(g, y) | {x, y}
     edges = sorted((e for e in hcg.active_edges() if {e.src, e.dst} & rel), key=lambda e: (e.confidence, e.key))
@@ -136,7 +136,7 @@ def sensitivity(q: Query, hcg: HCG, df: pd.DataFrame, base: float, base_ci: tupl
     return tab, summary
 
 
-# ---------- 가정 ----------
+# ---------- assumptions ----------
 def assumptions(q: Query, e: Estimand, hcg: HCG, df: pd.DataFrame, g: nx.DiGraph) -> list[str]:
     x, y = q.treatment, q.outcome
     out = [f"그래프 '{hcg.graph_id}'가 참 인과 구조를 담고 있다(활성 엣지 {len(hcg.active_edges())}개)."]
@@ -162,14 +162,14 @@ def assumptions(q: Query, e: Estimand, hcg: HCG, df: pd.DataFrame, g: nx.DiGraph
 class Analysis:
     query: Query
     estimand: Estimand
-    estimate: dict  # {이름: {"value", "ci"}} — ate(추정식), association, nde, nie, ett ...
+    estimate: dict  # {name: {"value", "ci"}} — ate (estimand), association, nde, nie, ett ...
     refutation: pd.DataFrame
     sensitivity: pd.DataFrame
     sensitivity_summary: dict
     paths: list
     backdoor: list
     assumptions: list
-    names: dict = field(default_factory=dict)  # id → 설명용 이름
+    names: dict = field(default_factory=dict)  # id -> display name
     experiment: dict = field(default_factory=dict)
 
     @property

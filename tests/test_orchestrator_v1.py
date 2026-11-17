@@ -1,4 +1,4 @@
-"""오케스트레이터 v1(Step 11): 데모 2종, Rung 라우터의 상향, Humm-LM 검증 경로(원격 생성 흉내)."""
+"""Orchestrator v1: two demos, Rung router escalation, and the Humm-LM verification path (simulated remote generation)."""
 import numpy as np
 import pytest
 
@@ -21,7 +21,7 @@ def test_demo_specs_truth():
         t = s.truth()
         assert set(t) == {e[3] for e in s.expected} | {"nde"} and len(s.questions) == len(s.expected) == 6
     mf = demo.scenario("manufacturing", n=500, n_exp=100).truth()
-    assert mf["ate"] < -0.05 and abs(mf["nde"]) < 1e-9  # 정비 효과는 모두 진동을 거친다
+    assert mf["ate"] < -0.05 and abs(mf["nde"]) < 1e-9  # the maintenance effect passes entirely through vibration
 
 
 def test_manufacturing_parse_and_sign(manufacturing):
@@ -41,7 +41,7 @@ class FakeFast:
 
 
 class FakeLM:
-    """complete(분류)와 generate_raw(원격 도구 루프)만 흉내 낸다."""
+    """Mimics only complete (classification) and generate_raw (remote tool loop)."""
     class tok:
         @staticmethod
         def apply_chat_template(msgs, **kw):
@@ -77,7 +77,7 @@ def test_lm_verify_remote_path(manufacturing):
 
 
 def test_router_keeps_causal_verbs(manufacturing):
-    """인과 동사가 있는 질문은 라우터가 Rung 1(상관)이라 해도 ATE로 둔다(노트북 23: 한국어 데모 6문항이 상관으로 바뀌었다)."""
+    """A question with a causal verb stays ATE even if the router says Rung 1 (association); Korean demo questions had been turned into association."""
     s, hcg = manufacturing
     router = QueryRouter(FakeFast([0.98, 0.01, 0.01]), FakeLM(""), threshold=0.8)
     orch = Orchestrator(hcg, s.data, n_perm=0, n_boot=20, n_boot_scm=5, router=router)

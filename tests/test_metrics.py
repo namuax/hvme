@@ -23,12 +23,12 @@ def test_shd_counts_reversal_once():
 
 
 def test_sid_empty_estimate_on_chain():
-    # 부모 없음(∅)으로 조정하면 (b,a), (c,a), (c,b)에서 '효과 없음'을 잘못 추론하지 못한다
+    # adjusting with no parents (∅) cannot wrongly infer 'no effect' for (b,a), (c,a), (c,b)
     assert sid(CHAIN, empty_like(CHAIN)) == 3
 
 
 def test_sid_markov_equivalent_graphs_differ():
-    # a<-b<-c 는 a->b->c 와 같은 동치류지만 개입 효과는 다르다: SHD는 2, SID는 0보다 크다
+    # a<-b<-c is in the same equivalence class as a->b->c but its interventional effects differ: SHD is 2, SID is above 0
     rev = nx.DiGraph([("b", "a"), ("c", "b")])
     assert shd(CHAIN, rev) == 2 and sid(CHAIN, rev) > 0
 

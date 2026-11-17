@@ -1,1 +1,1 @@
-"""humm-mcp: Humm 도구를 MCP로 노출 (Step 7). 서버는 humm.mcp.server, 실행은 python -m humm.mcp."""
+"""humm-mcp: exposes Humm tools over MCP. The server is humm.mcp.server; run it with python -m humm.mcp."""

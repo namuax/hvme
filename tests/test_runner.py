@@ -21,7 +21,7 @@ def test_parse_yes_no():
     assert runner.parse_yes_no("Yes, because... Final answer: **no**") == 0
     assert runner.parse_yes_no("so the answer is yes.") == 1
     assert runner.parse_yes_no("unclear") == -1
-    assert runner.parse_yes_no("there are no confounders, so P(Y|X) = 0.42") == -1  # 잘린 풀이 속 'no'는 답이 아니다
+    assert runner.parse_yes_no("there are no confounders, so P(Y|X) = 0.42") == -1  # a 'no' inside a truncated solution is not an answer
 
 
 def test_noul_and_cot_summary():
@@ -38,7 +38,7 @@ def test_caugym_and_calm_scoring():
     assert caugym_correct('풀이 {"ANSWER": "Yes", "PROB": "0.1234"}', '{"PROB": "0.12343"}') and not caugym_correct('{"PROB": "0.1250"}', '{"PROB": "0.1234"}')
     assert caugym_correct("LACK_CONDITION", "LACK_CONDITION")
     if not (BENCH / "calm_repo").exists():
-        pytest.skip("CaLM 저장소가 없다(서버의 data/bench/calm_repo)")
+        pytest.skip("CaLM repository not found (data/bench/calm_repo)")
     from humm.bench import calm as C
 
     assert len(C.TASKS) == 45

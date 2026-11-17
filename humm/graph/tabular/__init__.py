@@ -1,4 +1,4 @@
-"""정형 데이터 → 인과 그래프(HCG) (Step 5)."""
+"""Tabular data -> causal graph (HCG)."""
 from .networks import DEV, HELDOUT, NETWORKS
 from .oracle import NoisyOracle
 from .pc import CPDAG, Knowledge, edge_frequency, pc, to_dag

@@ -1,9 +1,9 @@
-"""T6 집계: 문서 여러 개의 주장을 모아 엣지 후보와 신뢰도를 만든다.
+"""T6 aggregation: collect claims from multiple documents into edge candidates with confidence.
 
-- 같은 문서의 같은 방향 주장은 한 번만 센다(문서가 증거의 단위).
-- 인과 주장 가중치: 단정 1.0, 불확실 표현 0.5. 상관 주장은 방향 근거로 쓰지 않는다.
-- 반대 방향 주장과 '영향 없음' 주장은 반대 증거(contra)이다.
-- score = support / (support + contra + 1)  (라플라스 평활: 문서 하나뿐인 주장은 0.5)
+- Claims in the same direction within one document are counted once (the document is the unit of evidence).
+- Causal claim weights: assertive 1.0, hedged 0.5. Correlation claims are not used as evidence of direction.
+- Opposite-direction claims and 'no effect' claims are counter-evidence (contra).
+- score = support / (support + contra + 1)  (Laplace smoothing: a claim from a single document scores 0.5)
 """
 import pandas as pd
 

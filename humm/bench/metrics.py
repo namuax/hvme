@@ -1,17 +1,17 @@
-"""그래프 지표(SHD·SID·F1)와 확률 지표(정확도·Brier·ECE)."""
+"""Graph metrics (SHD, SID, F1) and probability metrics (accuracy, Brier, ECE)."""
 import networkx as nx
 import numpy as np
 
 from ..engine.identify import is_valid_adjustment
 
 
-# ---------- 그래프 구조 지표 ----------
+# ---------- Graph structure metrics ----------
 def _pairs(g):
     return {frozenset(e) for e in g.edges}
 
 
 def shd(true: nx.DiGraph, est: nx.DiGraph) -> int:
-    """Structural Hamming Distance: 누락·추가·방향 반전을 각각 1로 센다."""
+    """Structural Hamming Distance: each missing edge, extra edge and reversal counts as 1."""
     t, e = set(true.edges), set(est.edges)
     reversed_ = {(u, v) for u, v in e - t if (v, u) in t}
     return len(_pairs(true) ^ _pairs(est)) + len(reversed_)
@@ -25,16 +25,16 @@ def _prf(t: set, e: set) -> dict:
 
 
 def edge_f1(true: nx.DiGraph, est: nx.DiGraph) -> dict:
-    """방향까지 맞춘 엣지 기준과 방향을 무시한 골격(skeleton) 기준을 함께 반환한다."""
+    """Returns both the direction-aware edge score and the direction-agnostic skeleton score."""
     return {"directed": _prf(set(true.edges), set(est.edges)), "skeleton": _prf(_pairs(true), _pairs(est))}
 
 
 def sid(true: nx.DiGraph, est: nx.DiGraph) -> int:
-    """Structural Intervention Distance (Peters & Bühlmann, 2015), DAG 대 DAG.
+    """Structural Intervention Distance (Peters & Bühlmann, 2015), DAG vs. DAG.
 
-    추정 그래프에서 i의 부모 집합으로 p(x_j | do(x_i))를 계산했을 때 틀리는 (i, j) 쌍의 수.
-    - j가 추정 그래프에서 i의 부모이면 '효과 없음'을 뜻하므로, 참 그래프에서 j가 i의 자손일 때 틀린다.
-    - 그 밖에는 추정 그래프의 부모 집합이 참 그래프에서 유효한 조정 집합이 아니면 틀린다.
+    Number of (i, j) pairs whose p(x_j | do(x_i)) is wrong when computed with i's parent set in the estimated graph.
+    - If j is a parent of i in the estimated graph, it means 'no effect', so this is wrong when j is a descendant of i in the true graph.
+    - Otherwise it is wrong if the estimated graph's parent set is not a valid adjustment set in the true graph.
     """
     wrong = 0
     desc = {i: nx.descendants(true, i) for i in true.nodes}
@@ -51,14 +51,14 @@ def graph_report(true: nx.DiGraph, est: nx.DiGraph) -> dict:
             "n_true": true.number_of_edges(), "n_est": est.number_of_edges()}
 
 
-# ---------- 확률 보정 지표 ----------
+# ---------- Probability calibration metrics ----------
 def brier(p, y) -> float:
     p, y = np.asarray(p, float), np.asarray(y, float)
     return float(np.mean((p - y) ** 2))
 
 
 def ece(p, y, bins: int = 10) -> float:
-    """Expected Calibration Error (이진: p = 참일 확률). 예측 클래스의 신뢰도 기준으로 구간을 나눈다."""
+    """Expected Calibration Error (binary: p = probability of true). Bins by the confidence of the predicted class."""
     p, y = np.asarray(p, float), np.asarray(y, int)
     conf = np.maximum(p, 1 - p)
     correct = ((p >= 0.5).astype(int) == y).astype(float)

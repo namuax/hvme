@@ -1,8 +1,8 @@
-"""humm-mcp: Humm 그래프·검증·인과 엔진·오케스트레이터를 MCP 도구로 노출한다.
+"""humm-mcp: exposes the Humm graph, validation, causal engine and orchestrator as MCP tools.
 
-실행: python -m humm.mcp   (stdio). Claude Desktop/Code 설정 예:
-  {"mcpServers": {"humm": {"command": "python", "args": ["-m", "humm.mcp"], "cwd": "<humm 저장소>", "env": {"HUMM_LLM": "anthropic:claude-sonnet-5-5"}}}}
-도구 이름은 02_proposal.md의 humm.graph.* / humm.engine.* / humm.validate.* 를 MCP 이름 규칙(영문·숫자·_)에 맞춘 것이다.
+Run: python -m humm.mcp   (stdio). Example Claude Desktop/Code config:
+  {"mcpServers": {"humm": {"command": "python", "args": ["-m", "humm.mcp"], "cwd": "<humm repo>", "env": {"HUMM_LLM": "anthropic:claude-sonnet-5-5"}}}}
+Tool names follow the humm.graph.* / humm.engine.* / humm.validate.* namespaces, adapted to MCP naming rules (letters, digits, _).
 """
 import json
 

@@ -1,4 +1,4 @@
-"""기준선 실행기. Noul 방식(보기 토큰 확률)과 CoT 방식(생성 후 답 파싱)을 같은 결과 형식으로 낸다."""
+"""Baseline runner. Produces results in one format for the Noul mode (option-token probabilities) and the CoT mode (generate, then parse the answer)."""
 import re
 from pathlib import Path
 
@@ -13,9 +13,9 @@ ANSWER = re.compile(r"\banswer\s*(?:is)?\s*[:：]?\s*\**\s*(yes|no)\b", re.I)
 
 
 def parse_yes_no(text: str) -> int:
-    """'Final answer: yes/no'를 우선 찾고, 없으면 'answer is yes/no' 형식을 찾는다. 둘 다 없으면 -1(파싱 실패).
+    """Look for 'Final answer: yes/no' first, then 'answer is yes/no'. -1 (parse failure) if neither is found.
 
-    본문에 섞인 아무 yes/no 단어는 답으로 쓰지 않는다. 잘린 풀이를 오답이 아니라 파싱 실패로 집계하기 위해서다.
+    Stray yes/no words in the body are not taken as the answer, so that truncated solutions count as parse failures rather than wrong answers.
     """
     hits = FINAL.findall(text) or ANSWER.findall(text)
     return {"yes": 1, "no": 0}[hits[-1].lower()] if hits else -1
@@ -33,7 +33,7 @@ def run_cot(provider, df: pd.DataFrame, prompt_fn, max_new_tokens: int = 1024) -
 
 
 def summarize(res: pd.DataFrame, by: list[str] | None = None) -> pd.DataFrame:
-    """정확도·F1(양성=1)·파싱 실패율, Noul 결과면 Brier·ECE까지."""
+    """Accuracy, F1 (positive=1) and parse-failure rate, plus Brier and ECE for Noul results."""
     def stats(d):
         tp = ((d.pred == 1) & (d.label == 1)).sum()
         p = tp / max((d.pred == 1).sum(), 1)

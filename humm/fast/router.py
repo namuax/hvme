@@ -1,7 +1,7 @@
-"""라우터: Humm-Fast가 먼저 답하고, 확신이 낮은 문항만 느린 공급자(범용 LLM)로 올린다 (04_humm_fast.md 5장).
+"""Router: Humm-Fast answers first, and only low-confidence items are escalated to a slow provider (a general LLM).
 
-공급자 인터페이스를 따르므로 tabular_to_hcg·text_to_hcg에 provider로 넘기면 된다. 생성(complete)은 느린 공급자가 맡는다.
-확신도는 최대 보기 확률이다. threshold보다 낮으면 올린다. 호출 수는 n_fast·n_slow에 쌓인다.
+It follows the provider interface, so it can be passed as the provider to tabular_to_hcg and text_to_hcg. Generation (complete) is handled by the slow provider.
+Confidence is the maximum option probability. Items below threshold are escalated. Call counts accumulate in n_fast and n_slow.
 """
 import numpy as np
 
@@ -31,7 +31,7 @@ class Routed:
 
 
 def routing_curve(fast_probs: np.ndarray, slow_probs: np.ndarray, target: np.ndarray, thresholds=np.linspace(0.5, 1.0, 11)) -> list[dict]:
-    """같은 문항에 대한 fast·slow 확률로, 임계값별 상향 비율과 최종 정확도를 계산한다(실제로 다시 돌리지 않는다)."""
+    """From fast and slow probabilities on the same items, compute the escalation rate and final accuracy per threshold (without re-running anything)."""
     rows = []
     for t in thresholds:
         up = fast_probs.max(1) < t

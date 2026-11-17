@@ -1,9 +1,9 @@
-"""질의 생성기. 그래프·SCM을 무작위로 만들고, 정답은 모두 humm.engine으로 계산한다.
+"""Query generator. Graphs and SCMs are generated randomly, and all answers are computed with humm.engine.
 
-meta["vocab"]: 노드 → (한국어 이름, 상태1, 상태0, 영어 이름, 상태1, 상태0). 풀이 궤적(humm.lm.solutions)이 문맥과 같은 이름을 쓰게 한다.
+meta["vocab"]: node -> (Korean name, state1, state0, English name, state1, state0). Lets solution trajectories (humm.lm.solutions) use the same names as the context.
 
-수치 질의는 효과가 판정 기준에서 MARGIN 이상 떨어진 SCM만 쓴다(정답이 애매한 문제 제거).
-예/아니오 질의는 질문 방향(높아지는가/낮아지는가)을 골라 정답 비율을 50:50으로 맞춘다.
+Numeric queries use only SCMs whose effect is at least MARGIN away from the decision threshold (drops ambiguous answers).
+Yes/no queries choose the question direction (increase/decrease) so that answers are balanced 50:50.
 """
 import json
 from dataclasses import asdict, dataclass, field
@@ -24,13 +24,13 @@ MARGIN = 0.05
 @dataclass
 class Item:
     query_type: str
-    rung: int  # 1 연관, 2 개입, 3 반사실
+    rung: int  # 1 association, 2 intervention, 3 counterfactual
     kind: str  # noul | choice | score
     lang: str
     domain: str
     context: str
     question: str
-    label: int  # noul: 1/0, choice: 정답 보기 번호(0부터), score: 정답 단계(1부터)
+    label: int  # noul: 1/0, choice: index of the correct option (0-based), score: correct level (1-based)
     options: list = field(default_factory=list)
     value: float | None = None
     graph: list = field(default_factory=list)
@@ -38,7 +38,7 @@ class Item:
     meta: dict = field(default_factory=dict)
 
     def to_dict(self):
-        """JSON으로 저장했다 읽어도 같은 값이 되도록 튜플을 리스트로 바꾼다."""
+        """Convert tuples to lists so values are identical after a JSON round trip."""
         return json.loads(json.dumps(asdict(self), ensure_ascii=False))
 
 
@@ -51,7 +51,7 @@ def _lex(g, rng, lang, domain):
 
 
 def _q(st):
-    """'상태' 뒤에 붙는 조사 '로/으로'."""
+    """The particle '로/으로' attached after a state."""
     return f"'{st}'{josa(st, '로')[len(st):]}"
 
 
@@ -59,7 +59,7 @@ def _was(st):
     return f"'{st}'{'이었' if josa(st, '이').endswith('이') else '였'}"
 
 
-# ---------- 수치 질의 (Rung 1·2·3) ----------
+# ---------- Numeric queries (Rung 1, 2, 3) ----------
 def _effect_setup(rng, mediated=False, need_pair=True):
     for _ in range(50):
         g = random_dag(int(rng.integers(3, 7)), rng, p=0.5, max_parents=2)
@@ -95,7 +95,7 @@ def _numeric(qtype, rung, rng, lang, domain, setup, fn, question, threshold=0.0)
 
 
 def _cpt(scm):
-    """정답 재현용: SCM 확률표를 JSON으로 저장할 수 있는 형태로 남긴다."""
+    """For reproducing the answer: keep the SCM probability tables in a JSON-serializable form."""
     return {v: [float(p) for p in scm.cpt[v]] for v in scm.order}
 
 
@@ -207,7 +207,7 @@ def gen_ate_score(rng, lang, domain):
                 int(np.digitize(v, SCORE_EDGES)) + 1, SCORE_LEVELS[lang], round(v, 6), list(c["g"].edges), meta={"x": x, "y": y, "cpt": _cpt(scm), "vocab": lex.vocab})
 
 
-# ---------- 구조 질의 (그래프만 주어짐) ----------
+# ---------- Structural queries (only the graph is given) ----------
 def _pick(rng, seq, k):
     return [str(v) for v in rng.choice(seq, k, replace=False)]
 
@@ -266,7 +266,7 @@ TEMPLATES = {
 def _identify_graph(rng, target):
     if target in TEMPLATES:
         g = nx.DiGraph(TEMPLATES[target])
-        for i in range(int(rng.integers(0, 3))):  # 관측 노드를 덧붙여 겉모양을 다양하게 만든다
+        for i in range(int(rng.integers(0, 3))):  # append observed nodes to vary the surface form
             w, old = f"W{i}", [v for v in g.nodes if v != "U"]
             g.add_edges_from((w, v) for v in _pick(rng, old, int(rng.integers(1, 3))))
         mapping = dict(zip(rng.permutation(list(g.nodes)), [f"V{i}" for i in range(g.number_of_nodes())]))
@@ -297,7 +297,7 @@ def gen_identify(rng, lang, domain):
                 meta={"x": x, "y": y, "strategy": target, "option_order": [STRATEGIES[i] for i in order], "vocab": lex.vocab})
 
 
-# ---------- Corr2Cause식: 통계적 관계만 보고 인과 가설 판정 ----------
+# ---------- Corr2Cause-style: judge a causal hypothesis from statistical relations alone ----------
 def _rel(h, g, a, b):
     an = lambda v: nx.ancestors(g, v)
     return {"direct": g.has_edge(a, b),
@@ -317,7 +317,7 @@ HYP = {
 
 
 def gen_corr2cause(rng, lang, domain):
-    """정답이 '참'인 가설과 '거짓'인 가설을 전수 계산한 뒤, 원하는 쪽에서 하나를 고른다(정답 비율 50:50)."""
+    """Enumerate all hypotheses whose answer is true and those whose answer is false, then pick one from the desired side (answers balanced 50:50)."""
     want = bool(rng.random() < 0.5)
     for _ in range(20):
         n = int(rng.integers(3, 5))

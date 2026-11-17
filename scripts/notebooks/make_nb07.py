@@ -2,20 +2,20 @@ import sys
 import nbformat as nbf
 
 cells = [
-"""md:# 07. 텍스트 → 인과 그래프 — 추출 · 정규화 · 집계 · 반사실 검증
+"""md:# 07. Text → causal graph — extraction, normalization, aggregation, counterfactual verification
 
-보고서·문서 같은 비정형 텍스트에서 인과 그래프(HCG)를 만들고, 정형 데이터 그래프와 합친다(`02_proposal.md` 4.2).
+This notebook builds a causal graph (HCG) from unstructured text such as reports and documents, and merges it with a graph built from tabular data.
 
-| 단계 | 내용 | 모듈 |
+| Stage | What it does | Module |
 |---|---|---|
-| T1 | 문서를 문장 경계에서 조각으로 나눈다 | `chunk` |
-| T2·T3 | 조각마다 LLM이 관계 주장(인과·상관·무효과, 증감, 불확실 여부)을 JSON으로 뽑는다 | `extract_claims` |
-| T5 | 같은 변수의 여러 표현을 정규 이름으로 묶는다 | `canonicalize` |
-| T6 | 문서 단위로 주장을 세어 엣지 후보와 점수를 만든다. 반대 방향·무효과 주장은 반대 증거이다 | `aggregate` |
-| T7 | "원인이 바뀌면 결과가 바뀌는가"를 정방향·역방향으로 묻고, 확률을 LLM 증거로 붙인다(거르지는 않는다) | `verify_edges` |
-| 병합 | 텍스트 HCG를 정형 HCG에 붙이고 데이터로 검증한다 | `merge_hcg`, `validate_hcg` |
+| T1 | Split documents into chunks at sentence boundaries | `chunk` |
+| T2-T3 | For each chunk, the LLM extracts relation claims (causal, correlational, no effect; increase/decrease; hedged or not) as JSON | `extract_claims` |
+| T5 | Group different expressions of the same variable under a canonical name | `canonicalize` |
+| T6 | Count claims per document to produce edge candidates and scores. Opposite-direction and no-effect claims count as counter-evidence | `aggregate` |
+| T7 | Ask "if the cause changes, does the effect change?" in the forward and reverse directions, and attach the probabilities as LLM evidence (not used as a filter) | `verify_edges` |
+| Merge | Attach the text HCG to the tabular HCG and validate with data | `merge_hcg`, `validate_hcg` |
 
-정답 그래프가 있어야 성능을 잴 수 있으므로, **합성 코퍼스**로 평가한다. 정답 DAG에서 문서를 만들되, 동의어·여러 문형·상관 진술(방해)·무효과 진술·불확실 표현·틀린 주장을 담은 문서를 섞는다. 1~4장과 6장은 CPU(가상 LLM 또는 기록 재생), 5장은 GPU에서 실행한다.""",
+Performance can only be measured against a ground-truth graph, so we evaluate on a **synthetic corpus**. Documents are generated from a ground-truth DAG and mixed with synonyms, several sentence patterns, correlational statements (distractors), no-effect statements, hedged expressions and wrong claims. Sections 1-4 and 6 run on CPU (simulated LLM or replay of recorded responses); section 5 needs a GPU.""",
 """import networkx as nx
 import pandas as pd
 
@@ -28,30 +28,30 @@ from humm.validate import validate_hcg
 pd.set_option("display.max_colwidth", 80)
 DOMAINS, LANGS = ["marketing", "manufacturing", "it_ops"], ["ko", "en"]
 corpora = {(d, l): make_corpus(d, l, seed=1) for d in DOMAINS for l in LANGS}""",
-"""md:## 1. 합성 코퍼스
+"""md:## 1. Synthetic corpus
 
-도메인 3개 × 언어 2개, 코퍼스마다 문서 12개이다. 정답 엣지 9개가 각각 문서 3개에 등장하고, 문서의 15%는 틀린 주장(뒤집힌 방향, 없는 엣지)을 담는다. 정답 엣지는 도메인의 그럴듯한 인과 순서를 따른다.""",
+3 domains × 2 languages, with 12 documents per corpus. Each of the 9 ground-truth edges appears in 3 documents, and 15% of documents contain wrong claims (reversed direction, nonexistent edge). The ground-truth edges follow a plausible causal order for the domain.""",
 """c = corpora[("marketing", "ko")]
-print("정답 엣지:", [(a, b, d["sign"]) for a, b, d in c.graph.edges(data=True)])
-print("\\n문서 예시:", c.docs[0]["text"])
-pd.DataFrame([{"문장": s, **{k: n[k] for k in ("cause", "effect", "relation", "polarity", "hedged")}, "틀린 주장": n.get("wrong", False)}
+print("Ground-truth edges:", [(a, b, d["sign"]) for a, b, d in c.graph.edges(data=True)])
+print("\\nExample document:", c.docs[0]["text"])
+pd.DataFrame([{"sentence": s, **{k: n[k] for k in ("cause", "effect", "relation", "polarity", "hedged")}, "wrong claim": n.get("wrong", False)}
               for s, n in list(c.annotations.items())[:12]])""",
-"""md:## 2. 파이프라인 한 단계씩 (가상 LLM, 오류율 0.1)
+"""md:## 2. The pipeline step by step (simulated LLM, error rate 0.1)
 
-`TextOracle`은 정답을 알지만 일부러 틀리는 가상 LLM이다. 추출에서 주장을 빠뜨리거나 방향을 뒤집고, 정규화에서 표현을 잘못 떼어 놓고, 반사실 검증에서 답을 뒤집는다.""",
+`TextOracle` is a simulated LLM that knows the ground truth but errs on purpose. In extraction it drops claims or flips directions, in normalization it wrongly separates expressions, and in counterfactual verification it flips answers.""",
 """r = text_to_hcg(c.docs, "marketing-ko", "marketing", TextOracle(c, 0.1, seed=3))
-print("추출된 주장:", len(r.claims), "| 정규 변수:", len(set(r.mapping.values())))
+print("Extracted claims:", len(r.claims), "| canonical variables:", len(set(r.mapping.values())))
 r.claims[["doc_id", "cause", "effect", "relation", "polarity", "hedged"]].head(8)""",
-"""pd.Series(r.mapping, name="정규 이름").to_frame().sort_values("정규 이름")""",
+"""pd.Series(r.mapping, name="canonical name").to_frame().sort_values("canonical name")""",
 """r.candidates[["src", "dst", "support", "contra", "correlational", "score", "sign"]].merge(r.edges[["src", "dst", "p_fwd", "p_rev"]], how="left", on=["src", "dst"])""",
-"""md:집계 점수 하한(기본 0.55)은 서로 다른 문서 두 곳 이상이 같은 방향을 말한 엣지만 남긴다. 틀린 문서 하나가 주장한 엣지는 여기서 걸러진다. 반사실 검증 확률(p_fwd)은 엣지를 거르지 않고 LLM 증거로 붙는다. 최종 엣지는 텍스트 증거와 LLM 증거, 두 종류를 가지므로 supported가 된다.
+"""md:The aggregation score floor (default 0.55) keeps only edges that at least two different documents state in the same direction. An edge claimed by a single wrong document is filtered out here. The counterfactual verification probability (p_fwd) does not filter edges; it is attached as LLM evidence. A final edge has two kinds of evidence, text and LLM, so it becomes supported.
 
-> 1차 GPU 실행(2026-10-25)에서 반사실 검증으로 엣지를 거르면 9B의 F1이 0.82에서 0.51로 떨어졌다. 참 후보와 거짓 후보의 p_fwd 평균이 0.48과 0.51로 구별되지 않았다. LLM의 반사실 판단은 텍스트가 무엇을 말하는지가 아니라 세상 상식을 반영하기 때문이다. 그래서 거르는 기준을 문서 간 집계 점수로 바꿨다(`reports/2026-10-25_text_llm.md`).""",
+> Filtering edges by counterfactual verification dropped the 9B model's F1 from 0.82 to 0.51. The mean p_fwd of true and false candidates was 0.48 and 0.51, which is not separable: the LLM's counterfactual judgment reflects world knowledge rather than what the text says. The filtering criterion was therefore changed to the cross-document aggregation score.""",
 """print(evaluate(list(zip(r.edges.src, r.edges.dst)), r.mapping, c))
 [(e.key, e.sign, e.status.value, round(e.confidence, 2)) for e in r.hcg.edges]""",
-"""md:## 3. 오류율 실험 (가상 LLM)
+"""md:## 3. Error-rate experiment (simulated LLM)
 
-추출·정규화의 오류율을 바꿔 가며 여섯 코퍼스 평균 성능을 본다. 집계 점수 하한을 0.4(문서 하나로도 통과)와 0.55(문서 둘 이상)로 비교한다. 가상 LLM은 반사실 검증에서 정답을 알고 답하므로, 검증으로 거르는 설정은 여기서는 비교하지 않는다.""",
+Vary the extraction and normalization error rate and look at the average performance over the six corpora. We compare an aggregation score floor of 0.4 (a single document suffices) with 0.55 (at least two documents). The simulated LLM answers counterfactual verification with knowledge of the ground truth, so the verification-filter setting is not compared here.""",
 """rows = []
 for (d, l), corp in corpora.items():
     for err in (0.0, 0.1, 0.2, 0.3):
@@ -60,11 +60,11 @@ for (d, l), corp in corpora.items():
             rows.append({"domain": d, "lang": l, "error": err, "min_score": ms, **evaluate(list(zip(res.edges.src, res.edges.dst)), res.mapping, corp)})
 oracle_res = pd.DataFrame(rows)
 oracle_res.groupby(["error", "min_score"])[["precision", "recall", "f1", "reversed", "group_purity", "var_split"]].mean().round(3)""",
-"""md:## 4. (GPU) 실제 LLM — Qwen3.5
+"""md:## 4. (GPU) Real LLMs — Qwen3.5
 
-두 모델로 여섯 코퍼스를 처리하고 정답 그래프와 비교한다. 이전 설정(점수 하한 0.4 + 검증 임계 0.5로 거르기)과 새 기본값(점수 하한 0.55, 검증은 증거로만)을 함께 잰다. 응답은 `results/llm_cache/`에 기록되므로, Mac에서 GPU 없이 재생해 기준값을 바꿔 가며 다시 실험할 수 있다.
+Process the six corpora with two models and compare with the ground-truth graph. We measure the old setting (score floor 0.4 + filtering with a verification threshold of 0.5) alongside the new default (score floor 0.55, verification used only as evidence). Responses are recorded to `results/llm_cache/`, so thresholds can be varied and re-evaluated by replay without a GPU.
 
-> 재생 분석(2026-10-25, 9B): 새 기본값은 정밀도 0.94, 재현율 0.87, F1 0.90이고 방향을 뒤집은 엣지가 없었다. 이전 설정은 F1 0.51이었다.""",
+> Replay analysis (9B): the new default gives precision 0.94, recall 0.87 and F1 0.90, with no reversed edges. The old setting gave F1 0.51.""",
 """import gc
 
 import torch
@@ -93,9 +93,9 @@ llm_res = pd.DataFrame(llm_rows)
 llm_res.to_csv(RESULTS / "text_llm.csv", index=False)
 llm_res.groupby(["model", "setting"])[["claims", "precision", "recall", "f1", "reversed", "group_purity", "unmapped_phrases"]].mean().round(3)""",
 """llm_res.pivot_table(index=["model", "setting"], columns=["lang", "domain"], values="f1").round(2)""",
-"""md:## 5. (CPU) 텍스트 + 데이터 병합 (기록 재생)
+"""md:## 5. (CPU) Merging text and data (replay)
 
-마케팅 코퍼스의 정답 DAG로 표 데이터를 만들고(PC만, LLM 없이), 9B가 만든 텍스트 HCG와 합친다. 두 그래프의 노드는 별칭 사전으로 잇는다. 반대 방향 엣지가 함께 있으면 **방향 증거**(텍스트·LLM·전문가, PC의 v-구조·Meek 규칙)가 강한 쪽을 남긴다. PC가 임의로 정한 방향은 방향 증거로 치지 않는다.""",
+Generate tabular data from the marketing corpus's ground-truth DAG (PC only, no LLM) and merge it with the text HCG built by the 9B model. Nodes of the two graphs are linked through an alias dictionary. When opposite-direction edges coexist, the one with stronger **orientation evidence** (text, LLM, expert, and PC's v-structures and Meek rules) is kept. A direction PC chose arbitrarily does not count as orientation evidence.""",
 """from humm.providers.cache import ReplayProvider
 
 c = corpora[("marketing", "ko")]
@@ -105,22 +105,21 @@ txt = text_to_hcg(c.docs, "marketing-text", "marketing", ReplayProvider(RESULTS 
 link = link_nodes(txt.hcg, tab.hcg, {v[0]: v[1] + v[2] for v in TEXT_VOCAB["marketing"]})
 merged = merge_hcg(txt.hcg, tab.hcg, link, "marketing-merged")
 report, changes = validate_hcg(merged, df, n_perm=50)
-print("연결:", link)
-print("판정:", report.summary()["verdict"], "| 데이터만 썼을 때 엣지:", len(tab.hcg.active_edges()), "| 병합 후 활성 엣지:", len(merged.active_edges()))
+print("Links:", link)
+print("Verdict:", report.summary()["verdict"], "| edges with data only:", len(tab.hcg.active_edges()), "| active edges after merge:", len(merged.active_edges()))
 changes.assign(true_edge=[tuple(e.split("→")) in set(c.graph.edges) for e in changes.edge])""",
 """report.save(RESULTS / "validation" / "marketing-merged.json")
 merged.save(RESULTS / "validation" / "marketing-merged.hcg.json")
 changes.groupby("after").edge.count()""",
-"""md:## Mac으로 옮길 파일
+"""md:## Result files
 
-실행한 노트북은 원본과 다른 이름으로 저장하고, `notebooks/`의 원본은 출력 없이 둔다.
+Files written by this notebook.
 
-| 파일 | 필수 여부 | 비고 |
+| File | Required | Notes |
 |---|---|---|
-| 이 노트북 | 필수 | `runs/<날짜>-gpu/` |
-| `results/text_llm.csv` | 필수 | 4장: 모델·코퍼스별 엣지 F1과 정규화 품질 |
-| `results/llm_cache/Qwen3.5-4B.json`, `Qwen3.5-9B.json` | 필수 | LLM 응답 기록(06장 기록에 추가됨). Mac에서 재생해 기준값 실험에 쓴다 |
-| `results/validation/marketing-merged.json`, `marketing-merged.hcg.json` | 필수 | 5장: 병합 그래프 검증 리포트와 HCG |""",
+| `results/text_llm.csv` | yes | Section 4: edge F1 and normalization quality per model and corpus |
+| `results/llm_cache/Qwen3.5-4B.json`, `Qwen3.5-9B.json` | yes | Recorded LLM responses (appended to the ones from notebook 06); replay them to experiment with thresholds |
+| `results/validation/marketing-merged.json`, `marketing-merged.hcg.json` | yes | Section 5: validation report and HCG of the merged graph |""",
 ]
 
 n = nbf.v4.new_notebook()

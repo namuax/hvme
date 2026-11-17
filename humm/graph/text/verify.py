@@ -1,4 +1,4 @@
-"""T7 반사실 검증: 엣지 후보마다 '원인이 바뀌면 결과가 바뀌는가'를 정방향·역방향으로 묻는다(Noul 형식)."""
+"""T7 counterfactual verification: for each edge candidate, ask 'if the cause changes, does the effect change?' in forward and reverse directions (Noul format)."""
 import pandas as pd
 
 VERIFY_PROMPT = """You are an expert in {domain}.
@@ -13,7 +13,7 @@ def _yes_prob(provider, prompts) -> list[float]:
 
 
 def verify_edges(provider, edges: pd.DataFrame, domain: str) -> pd.DataFrame:
-    """p_fwd: 원인 → 결과 반사실 의존 확률, p_rev: 반대 방향."""
+    """p_fwd: probability of counterfactual dependence cause -> effect; p_rev: the opposite direction."""
     if edges.empty:
         return pd.DataFrame(columns=["src", "dst", "p_fwd", "p_rev"])
     fwd = _yes_prob(provider, [VERIFY_PROMPT.format(domain=domain, cause=a, effect=b) for a, b in zip(edges.src, edges.dst)])

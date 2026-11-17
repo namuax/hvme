@@ -1,16 +1,16 @@
-"""GPU 작업 실행기 (SFT v2 노트북): 교사 샘플링·평가를 GPU별 하위 프로세스로 띄워 두 GPU를 동시에 쓴다.
+"""GPU job runner: launches teacher sampling and evaluation as per-GPU subprocesses so two GPUs run concurrently.
 
     python -m humm.lm.jobs sample   --model Qwen/Qwen3.5-9B --device cuda:1 --items a.jsonl --out b.jsonl [--mode cot --n 2]
-    python -m humm.lm.jobs paraphrase --model Qwen/Qwen3.5-9B --items a.jsonl --out p.jsonl --max-new-tokens 1024 [--style story]   (Step 10: 문맥 다시 쓰기)
-    python -m humm.lm.jobs gym      --model <경로> --device cuda:0 --items a.jsonl --mode tool --out c.csv
-    python -m humm.lm.jobs cladder  --model <경로> --device cuda:1 --mode tool|causalcot [--per-rung 50] --out d.csv
-    python -m humm.lm.jobs corr2cause --model <경로> --mode tool|causalcot --n 300 --out e.csv   (Corr2Cause test에서 n개)
-    python -m humm.lm.jobs caugym   --model <경로> --mode tool|cot --per-type 15 --out g.csv                (CauGym 테스트 6종, 유형마다 --per-type개)
-    python -m humm.lm.jobs calm     --model <경로> --mode tool|basic --per-type 30 --out h.csv                (CaLM-lite 영어 45과제, 원 프롬프트 basic·원 채점)
-    python -m humm.lm.jobs math|kmmlu --model <경로> --out f.csv                                  (일반 능력: MATH-500 전체, KMMLU 과목당 --per-subject개, 기본 7, --split train은 궤적 수집)
-    --lora results/lm_grpo/lora_step20.pt: 모델에 GRPO LoRA 체크포인트를 병합해 평가한다(결과의 model 열은 체크포인트 이름)
+    python -m humm.lm.jobs paraphrase --model Qwen/Qwen3.5-9B --items a.jsonl --out p.jsonl --max-new-tokens 1024 [--style story]   (context rewriting)
+    python -m humm.lm.jobs gym      --model <path> --device cuda:0 --items a.jsonl --mode tool --out c.csv
+    python -m humm.lm.jobs cladder  --model <path> --device cuda:1 --mode tool|causalcot [--per-rung 50] --out d.csv
+    python -m humm.lm.jobs corr2cause --model <path> --mode tool|causalcot --n 300 --out e.csv   (n items from the Corr2Cause test set)
+    python -m humm.lm.jobs caugym   --model <path> --mode tool|cot --per-type 15 --out g.csv                (the 6 CauGym test types, --per-type items per type)
+    python -m humm.lm.jobs calm     --model <path> --mode tool|basic --per-type 30 --out h.csv                (CaLM-lite, 45 English tasks, original basic prompt and original scoring)
+    python -m humm.lm.jobs math|kmmlu --model <path> --out f.csv                                  (general ability: all of MATH-500, KMMLU with --per-subject items per subject (default 7); --split train collects trajectories)
+    --lora <path>/lora_step20.pt: merges a GRPO LoRA checkpoint into the model before evaluating (the model column in the results is the checkpoint name)
 
-노트북에서는 launch()로 띄우고 wait()로 기다린다. 로그는 --log 파일에 남는다.
+In notebooks, start jobs with launch() and wait with wait(). Logs go to the --log file.
 """
 import argparse
 import os
@@ -25,22 +25,22 @@ PY = sys.executable
 
 
 def launch(cmd: str, *args, log: str | Path, **opts) -> subprocess.Popen:
-    """python -m humm.lm.jobs <cmd> ... 를 백그라운드로 띄운다."""
+    """Launch python -m humm.lm.jobs <cmd> ... in the background."""
     argv = [PY, "-m", "humm.lm.jobs", cmd, *map(str, args)] + [x for k, v in opts.items() for x in (f"--{k.replace('_', '-')}", str(v))]
     Path(log).parent.mkdir(parents=True, exist_ok=True)
     return subprocess.Popen(argv, stdout=open(log, "w"), stderr=subprocess.STDOUT, cwd=ROOT, env=os.environ | {"PYTHONPATH": str(ROOT)})
 
 
 def wait(*procs, every: int = 600):
-    """모두 끝날 때까지 기다리며 every초마다 경과를 찍는다. 하나라도 실패하면 멈춘다."""
+    """Wait until all finish, printing progress every `every` seconds. Stops if any job fails."""
     t = nxt = time.time()
     while any(p.poll() is None for p in procs):
         time.sleep(30)
         if time.time() >= nxt + every:
             nxt = time.time()
-            print(f"{(nxt - t) / 60:.0f}분 경과, 남은 작업 {sum(p.poll() is None for p in procs)}개", flush=True)
+            print(f"{(nxt - t) / 60:.0f} min elapsed, {sum(p.poll() is None for p in procs)} jobs remaining", flush=True)
     bad = [p.args for p in procs if p.returncode]
-    assert not bad, f"실패한 작업: {bad}"
+    assert not bad, f"failed jobs: {bad}"
     return round(time.time() - t)
 
 
@@ -56,14 +56,14 @@ def main():
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--max-new-tokens", type=int, default=2048)
     ap.add_argument("--lora")
-    ap.add_argument("--quant", default="", choices=["", "int8", "nf4"], help="Step 12: bitsandbytes 가중치 양자화(결과의 model 열에 붙는다)")
-    ap.add_argument("--style", default="context", help="paraphrase: context(문맥만, 노트북 19) | story(문항 전체를 다른 분야로, 노트북 20) | story2(분야·형식 회전, 노트북 21)")
+    ap.add_argument("--quant", default="", choices=["", "int8", "nf4"], help="bitsandbytes weight quantisation (appended to the model column of the results)")
+    ap.add_argument("--style", default="context", help="paraphrase: context (rewrite the context only) | story (rewrite the whole item in another domain) | story2 (rotate domains and text formats)")
     ap.add_argument("--per-subject", type=int, default=7)
     ap.add_argument("--per-type", type=int, default=15)
-    ap.add_argument("--per-rung", type=int, default=50, help="cladder: Rung마다 문항 수(Fast 평가 600문항 = 200)")
-    ap.add_argument("--split", default="test", help="kmmlu: test(평가) 또는 train(한국어 일반 궤적 수집)")
-    ap.add_argument("--lm-url", help="Phase A: vLLM 서버(OpenAI 호환) 주소. 주면 --model은 토크나이저 경로로만 쓴다")
-    ap.add_argument("--served", default="humm-lm-9b", help="--lm-url 서버의 모델 이름")
+    ap.add_argument("--per-rung", type=int, default=50, help="cladder: items per rung (200 gives the 600-item set)")
+    ap.add_argument("--split", default="test", help="kmmlu: test (evaluation) or train (collect Korean general-ability trajectories)")
+    ap.add_argument("--lm-url", help="URL of an OpenAI-compatible server (vLLM). When set, --model is only used as the tokenizer path")
+    ap.add_argument("--served", default="humm-lm-9b", help="model name served at --lm-url")
     a = ap.parse_args()
 
     import pandas as pd
@@ -91,7 +91,7 @@ def main():
         df = sample_tools(lm, items, n=a.n, mode=a.mode, max_new_tokens=a.max_new_tokens, max_rounds=3 if a.mode == "tool" else 1)
         write_jsonl(df.to_dict("records"), a.out)
         print(df.groupby("task").agg(n=("reward", "size"), reward=("reward", "mean"), loop=("loop", "mean")).round(3))
-    elif a.cmd == "paraphrase":  # Step 10: Gym 문맥을 자연스러운 글로 다시 쓴다(humm.fast.distill)
+    elif a.cmd == "paraphrase":  # rewrite the Gym context as natural prose (humm.fast.distill)
         from ..fast.distill import paraphrase_prompt, story2_prompt, story_prompt
         items = read_jsonl(a.items)
         fn = {"context": lambda d, i: paraphrase_prompt(d), "story": lambda d, i: story_prompt(d), "story2": story2_prompt}[a.style]
@@ -104,7 +104,7 @@ def main():
         df = pd.DataFrame(items).assign(output=outs, answer=[parse_final(o) for o in outs], correct=[bool(reward(d, o)) for d, o in zip(items, outs)],
                                         mode=a.mode, model=name)
         df.drop(columns=["meta"]).to_csv(a.out, index=False)
-        print(df.groupby("query_type").correct.mean().round(3), "\n전체", round(df.correct.mean(), 3))
+        print(df.groupby("query_type").correct.mean().round(3), "\noverall", round(df.correct.mean(), 3))
     elif a.cmd in ("math", "kmmlu"):
         from ..bench import datasets as D, general as G
         df = D.load_math500() if a.cmd == "math" else D.load_kmmlu(a.per_subject, split=a.split)
@@ -114,7 +114,7 @@ def main():
         df["correct"] = ([G.math_correct(o, x) for o, x in zip(outs, df.answer)] if a.cmd == "math" else
                          [G.parse_choice(o) == x for o, x in zip(outs, df.answer)])
         df.to_csv(a.out, index=False)
-        print("정확도", round(df.correct.mean(), 3))
+        print("accuracy", round(df.correct.mean(), 3))
     elif a.cmd == "caugym":
         from ..bench import datasets as D, general as G
         df = pd.concat([D.load_caugym(s, a.per_type) for s in D.CAUGYM_SETS], ignore_index=True)
@@ -122,11 +122,11 @@ def main():
         outs = generate_tools(lm, [p + suffix for p in df.problem], tools=a.mode == "tool", max_new_tokens=a.max_new_tokens, max_rounds=3 if a.mode == "tool" else 1)
         df = df.drop(columns=["Reason"]).assign(output=outs, correct=[G.caugym_correct(o, x) for o, x in zip(outs, df.answer)], mode=a.mode, model=name, bench="caugym")
         df.to_csv(a.out, index=False)
-        print(df.pivot_table(index="Type", columns="set", values="correct").round(2), "\n전체", round(df.correct.mean(), 3))
+        print(df.pivot_table(index="Type", columns="set", values="correct").round(2), "\noverall", round(df.correct.mean(), 3))
     elif a.cmd == "calm":
         from ..bench import calm as C
         items = [d | {"task": t} for t in C.TASKS for d in C.questions(t, n=a.per_type)]
-        use = [a.mode == "tool" or a.mode == "route" and C.needs_tools(d["question"]) for d in items]  # route(v2.12): 인과 관계나 확률이 주어진 문제에만 도구
+        use = [a.mode == "tool" or a.mode == "route" and C.needs_tools(d["question"]) for d in items]  # route: use tools only for problems that give causal relations or probabilities
         suffix = f"\n\n{TOOL['en'].format(fmt='the answer format asked for above')}"
         outs = [None] * len(items)
         for flag in (True, False):
@@ -138,7 +138,7 @@ def main():
                            "correct": [C.correct(d["task"], d, o) for d, o in zip(items, outs)],
                            "correct_tail": [C.correct(d["task"], d, C.tail(o)) for d, o in zip(items, outs)]}).assign(mode=a.mode, model=name, bench="calm")
         df.to_csv(a.out, index=False)
-        print(df.groupby("task")[["correct", "correct_tail"]].mean().round(2), "\n전체", df[["correct", "correct_tail"]].mean().round(3).to_dict())
+        print(df.groupby("task")[["correct", "correct_tail"]].mean().round(2), "\noverall", df[["correct", "correct_tail"]].mean().round(3).to_dict())
     elif a.cmd == "corr2cause":
         from ..bench import datasets as D, prompts as P, runner as R
         cc = D.load_corr2cause(n=a.n, seed=0)
@@ -160,8 +160,8 @@ def main():
             outs = generate_tools(lm, [P.cladder_cot(r) for _, r in cl.iterrows()], tools=False, max_new_tokens=a.max_new_tokens, max_rounds=1)
         df = cl.assign(output=outs, pred=[R.parse_yes_no(o) for o in outs], mode=f"cot-{a.mode}", model=name, bench="cladder")
         df.to_csv(a.out, index=False)
-        print(R.summarize(df, by=["rung"])[["rung", "acc", "parse_fail"]].round(3), "\n전체", round((df.pred == df.label).mean(), 3))
-    print(f"{time.time() - t:.0f}초")
+        print(R.summarize(df, by=["rung"])[["rung", "acc", "parse_fail"]].round(3), "\noverall", round((df.pred == df.label).mean(), 3))
+    print(f"{time.time() - t:.0f}s")
 
 
 if __name__ == "__main__":

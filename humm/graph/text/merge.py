@@ -1,4 +1,4 @@
-"""텍스트 HCG와 정형(데이터) HCG를 합친다. 같은 변수의 노드를 이어 붙이고 엣지 증거를 모은다."""
+"""Merge a text HCG and a tabular (data) HCG. Links nodes of the same variable and pools edge evidence."""
 from difflib import SequenceMatcher
 
 from ...validate.report import DATA_DIRECTION_METHODS, DIRECTION_KINDS
@@ -7,8 +7,8 @@ from .canonical import norm
 
 
 def direction_score(e: Edge) -> float:
-    """방향을 뒷받침하는 증거만의 noisy-OR. 인접성만 말해 주는 데이터 증거(골격·검정·임의 확장)는 빼고,
-    텍스트·LLM·전문가·실험 증거와 PC가 v-구조·Meek 규칙으로 정한 방향만 센다."""
+    """noisy-OR over direction-supporting evidence only. Data evidence that only speaks to adjacency (skeleton, tests, arbitrary extension) is excluded;
+    only text, LLM, expert and experiment evidence, plus directions PC fixed via v-structures and Meek rules, are counted."""
     miss = 1.0
     for x in e.evidence:
         if x.kind in DIRECTION_KINDS or x.method in DATA_DIRECTION_METHODS:
@@ -17,7 +17,7 @@ def direction_score(e: Edge) -> float:
 
 
 def link_nodes(text: HCG, table: HCG, column_aliases: dict | None = None, cutoff: float = 0.85) -> dict:
-    """텍스트 노드 id → 정형 노드 id. 텍스트 노드의 이름·별칭이 열 이름(또는 열 별칭)과 같거나 충분히 비슷하면 잇는다."""
+    """text node id -> tabular node id. A text node is linked if its name/alias equals, or is similar enough to, a column name (or column alias)."""
     names = {n.id: {norm(n.id), norm(n.label)} | {norm(a) for a in (column_aliases or {}).get(n.id, [])} for n in table.nodes}
     out = {}
     for n in text.nodes:
@@ -29,8 +29,8 @@ def link_nodes(text: HCG, table: HCG, column_aliases: dict | None = None, cutoff
 
 
 def merge_hcg(text: HCG, table: HCG, link: dict, graph_id: str = "merged") -> HCG:
-    """정형 노드 이름을 기준으로 합친다. 연결되지 않은 텍스트 노드는 그대로 추가한다(관측되지 않은 변수일 수 있다).
-    같은 엣지는 증거를 합치고 상태를 hypothesis로 되돌려 다시 판정받게 한다. 반증된 엣지는 넘기지 않는다."""
+    """Merge using tabular node names as the reference. Unlinked text nodes are added as is (they may be unobserved variables).
+    Identical edges have their evidence pooled and their status reset to hypothesis so they are judged again. Refuted edges are not carried over."""
     out = HCG(graph_id=graph_id)
     for n in table.nodes:
         out.add_node(n.id, **n.model_dump(exclude={"id"}))
@@ -50,7 +50,7 @@ def merge_hcg(text: HCG, table: HCG, link: dict, graph_id: str = "merged") -> HC
             out.add_edge(u, v, sign=e.sign, mechanism=e.mechanism, evidence=list(e.evidence))
     for e in out.edges:
         e.status = EdgeStatus.HYPOTHESIS
-    for e in list(out.edges):  # 반대 방향 엣지가 함께 있으면 방향 증거가 강한 쪽만 남기고, 인접성 증거는 그쪽으로 옮긴다
+    for e in list(out.edges):  # if opposite-direction edges coexist, keep only the one with stronger direction evidence and move adjacency evidence onto it
         back = next((x for x in out.edges if x.key == (e.dst, e.src)), None)
         if back and e.status != EdgeStatus.REFUTED and back.status != EdgeStatus.REFUTED:
             keep, drop = (e, back) if direction_score(e) >= direction_score(back) else (back, e)

@@ -2,20 +2,20 @@ import sys
 import nbformat as nbf
 
 cells = [
-"""md:# 05. DAG 검증 — 그래프를 데이터로 반증하기
+"""md:# 05. DAG Validation — Falsifying a Graph with Data
 
-인과 그래프는 원리상 "증명"할 수 없다. 데이터·지식·실험과 모순되지 않는지 반증을 시도하고, 거기서 살아남은 그래프만 쓸 수 있다. `humm.validate`는 `preliminary/03_dag_validation.md`의 6층 검증 중 데이터만으로 가능한 세 층을 구현한다.
+In principle, a causal graph cannot be "proven". We try to falsify it against data, knowledge and experiments, and only graphs that survive can be used. `humm.validate` implements three of the six validation layers, the ones that can be done with data alone.
 
-| 층 | 내용 | 상태 |
+| Layer | Content | Status |
 |---|---|---|
-| L1 구조 | 사이클, 자기 루프, 고립 노드, 시간 순서 위반 | 구현 |
-| L2 데이터 반증 | 국소 마르코프 조건(LMC) 검정, 순열 반증 검정, 엣지 의존성 검정, 메커니즘 적합도 | 구현 |
-| L3 지식 | 텍스트 증거, LLM 반사실 검증, 전문가 검토 | Step 6·8 |
-| L4 실험 | 개입 데이터와 예측 효과 비교 | 이후 |
-| L5 결론 강건성 | 대안 그래프 효과 범위, 반박 테스트 | `humm.engine.refute` 일부 |
-| L6 벤치마크 | 정답 그래프 대비 SHD·SID | 구현 (탐색 알고리즘은 Step 5) |
+| L1 Structure | Cycles, self-loops, isolated nodes, temporal order violations | Implemented |
+| L2 Data falsification | Local Markov condition (LMC) tests, permutation falsification test, edge dependence test, mechanism fit | Implemented |
+| L3 Knowledge | Text evidence, LLM counterfactual checks, expert review | Planned |
+| L4 Experiments | Compare interventional data with predicted effects | Planned |
+| L5 Conclusion robustness | Effect range over alternative graphs, refutation tests | Partly in `humm.engine.refute` |
+| L6 Benchmark | SHD and SID against the ground-truth graph | Implemented (discovery algorithms are planned) |
 
-노트북 03에서 본 것처럼, 교란 변수를 빠뜨린 그래프는 추정치 반박 테스트를 모두 통과한다. 그래프 자체의 오류는 이 노트북의 L2가 잡아야 한다.""",
+As seen in notebook 03, a graph that omits a confounder passes all the estimate refutation tests. Errors in the graph itself must be caught by L2 in this notebook.""",
 """import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -25,22 +25,22 @@ from humm.engine import BinarySCM, LinearSCM
 from humm.graph import HCG, Evidence, EvidenceKind
 from humm.paths import RESULTS
 from humm.validate import benchmark, fisher_z, g_test, sample_bnlearn, validate, validate_hcg""",
-"""md:## 1. 조건부 독립 검정
+"""md:## 1. Conditional independence tests
 
-L2의 기본 단위는 조건부 독립 검정이다. 이산 데이터는 G-검정(층별 우도비), 연속 데이터는 Fisher-z(편상관)를 쓴다. 사슬 `a → b → c`에서 a와 c는 의존하지만, b를 조건으로 주면 독립이 된다. p값이 크면 "독립과 모순되지 않는다"는 뜻이다.""",
+The basic unit of L2 is the conditional independence test. Discrete data uses the G-test (stratified likelihood ratio) and continuous data uses Fisher-z (partial correlation). In the chain `a → b → c`, a and c are dependent, but conditioning on b makes them independent. A large p-value means "not inconsistent with independence".""",
 """CHAIN = nx.DiGraph([("a", "b"), ("b", "c")])
 cont = LinearSCM(CHAIN, {("a", "b"): 1.0, ("b", "c"): 1.0}, {v: 1.0 for v in CHAIN}).sample(3000, seed=0)
 disc = BinarySCM(CHAIN, {"a": np.array([0.5]), "b": np.array([0.2, 0.8]), "c": np.array([0.2, 0.8])}).sample(5000, seed=0)
-pd.DataFrame({"Fisher-z (연속)": [fisher_z(cont, "a", "c"), fisher_z(cont, "a", "c", ("b",))],
-              "G-검정 (이산)": [g_test(disc, "a", "c"), g_test(disc, "a", "c", ("b",))]},
+pd.DataFrame({"Fisher-z (continuous)": [fisher_z(cont, "a", "c"), fisher_z(cont, "a", "c", ("b",))],
+              "G-test (discrete)": [g_test(disc, "a", "c"), g_test(disc, "a", "c", ("b",))]},
              index=["a ⫫ c", "a ⫫ c | b"]).map(lambda p: f"{p:.2e}")""",
-"""md:## 2. 참 그래프와 훼손된 그래프
+"""md:## 2. The true graph and corrupted graphs
 
-bnlearn Asia 네트워크에서 5,000개 표본을 뽑고, 참 그래프와 일부러 훼손한 그래프를 검증한다.
+We sample 5,000 observations from the bnlearn Asia network and validate the true graph and several deliberately corrupted graphs.
 
-- **LMC 위반 비율**: 그래프가 함의하는 조건부 독립 중 데이터가 기각한 비율. 참 그래프라면 유의수준(5%) 근처여야 한다.
-- **순열 p값**: 노드 이름을 무작위로 바꾼 그래프 100개와 비교해, 위반이 그만큼 적은 그래프의 비율. 작을수록 그래프가 데이터에 대해 정보를 가진다.
-- **판정**: pass는 위반 개수가 우연 수준(이항 검정 p ≥ 0.05)이고, 다중검정 보정 후에도 남는 강한 위반이 없고, 순열 p < 0.05일 때이다. LMC 검정이 5개 미만인 작은 그래프는 순열 검정의 검정력이 없어 이 조건을 빼고 판정한다.""",
+- **LMC violation rate**: the fraction of the conditional independences implied by the graph that the data reject. For the true graph it should be near the significance level (5%).
+- **Permutation p-value**: the fraction of 100 graphs with randomly permuted node names that have as few violations as the given graph. The smaller it is, the more informative the graph is about the data.
+- **Verdict**: pass requires that the number of violations is at chance level (binomial test p ≥ 0.05), that no strong violations remain after multiple-testing correction, and that the permutation p < 0.05. For small graphs with fewer than 5 LMC tests, the permutation test has no power, so that condition is dropped from the verdict.""",
 """true, asia = sample_bnlearn("asia", 5000, seed=0)
 
 
@@ -52,42 +52,42 @@ def edit(g, remove=(), add=()):
 
 
 cases = {
-    "참 그래프": true,
-    "either→dysp 누락": edit(true, remove=[("either", "dysp")]),
-    "smoke→bronc 누락": edit(true, remove=[("smoke", "bronc")]),
-    "lung→either 반전": edit(true, remove=[("lung", "either")], add=[("either", "lung")]),
-    "smoke→lung 반전": edit(true, remove=[("smoke", "lung")], add=[("lung", "smoke")]),
-    "asia→xray 추가": edit(true, add=[("asia", "xray")]),
+    "true graph": true,
+    "either→dysp missing": edit(true, remove=[("either", "dysp")]),
+    "smoke→bronc missing": edit(true, remove=[("smoke", "bronc")]),
+    "lung→either reversed": edit(true, remove=[("lung", "either")], add=[("either", "lung")]),
+    "smoke→lung reversed": edit(true, remove=[("smoke", "lung")], add=[("lung", "smoke")]),
+    "asia→xray added": edit(true, add=[("asia", "xray")]),
 }
 reports = {k: validate(g, asia, n_perm=100) for k, g in cases.items()}
-pd.DataFrame([{"그래프": k, **{c: r.summary()[c] for c in ["verdict", "lmc_tests", "lmc_violation_rate", "excess_violation_p", "strong_violations", "permutation_p", "edges_unsupported"]},
-               "빠진 엣지 후보 1순위": r.missing_edge_candidates(1)[0][:2] if r.missing_edge_candidates(1) else "-"}
+pd.DataFrame([{"graph": k, **{c: r.summary()[c] for c in ["verdict", "lmc_tests", "lmc_violation_rate", "excess_violation_p", "strong_violations", "permutation_p", "edges_unsupported"]},
+               "top missing-edge candidate": r.missing_edge_candidates(1)[0][:2] if r.missing_edge_candidates(1) else "-"}
               for k, r in reports.items()]).round(3)""",
-"""md:읽는 법은 다음과 같다.
+"""md:How to read the table:
 
-- **누락**: 엣지를 빼면 위반 비율이 크게 오르고, 빠진 엣지 후보 1순위가 실제로 뺀 쌍을 가리킨다.
-- **lung→either 반전**: v-구조(lung → either ← tub)가 바뀌므로 데이터가 잡아낸다.
-- **smoke→lung 반전**: 같은 마르코프 동치류 안의 변화라 관측 데이터로는 구별되지 않는다(pass). 이 방향은 L3 지식이나 L4 실험으로 정해야 한다.
-- **asia→xray 추가**: 그래프 전체 판정은 pass이지만, 엣지 의존성 검정이 이 엣지를 "데이터가 뒷받침하지 않음"으로 표시한다.""",
+- **Missing edges**: removing an edge raises the violation rate sharply, and the top missing-edge candidate points to the pair that was actually removed.
+- **lung→either reversal**: this changes the v-structure (lung → either ← tub), so the data catch it.
+- **smoke→lung reversal**: this is a change within the same Markov equivalence class, so observational data cannot distinguish it (pass). The direction must be settled by L3 knowledge or L4 experiments.
+- **asia→xray added**: the overall graph verdict is pass, but the edge dependence test flags this edge as "not supported by the data".""",
 """fig, axes = plt.subplots(1, 2, figsize=(10, 3.2), sharey=True)
-for ax, k in zip(axes, ["참 그래프", "either→dysp 누락"]):
+for ax, k in zip(axes, ["true graph", "either→dysp missing"]):
     perm = reports[k].permutation
     ax.hist(perm["perm_rates"], bins=20, color="#9aa5b1")
-    ax.axvline(perm["violation_rate"], color="#c0392b", lw=2, label=f"주어진 그래프 {perm['violation_rate']:.3f}")
-    ax.set_title(f"{k} (순열 p = {perm['p_value']:.2f})")
-    ax.set_xlabel("LMC 위반 비율")
+    ax.axvline(perm["violation_rate"], color="#c0392b", lw=2, label=f"given graph {perm['violation_rate']:.3f}")
+    ax.set_title(f"{k} (permutation p = {perm['p_value']:.2f})")
+    ax.set_xlabel("LMC violation rate")
     ax.legend()
-axes[0].set_ylabel("무작위 순열 그래프 수")
+axes[0].set_ylabel("random permuted graphs")
 plt.tight_layout()""",
-"""md:## 3. HCG 검증 흐름
+"""md:## 3. The HCG validation flow
 
-실제 파이프라인에서는 텍스트·LLM·전문가가 만든 HCG를 데이터로 검증한다. `validate_hcg`는 다음 순서로 동작한다.
+In a real pipeline, an HCG built from text, an LLM or experts is validated against data. `validate_hcg` works as follows.
 
-1. **L1 정리**: 시간 순서를 어긴 엣지를 refuted로 바꾸고, 남은 사이클은 가장 약한 엣지를 refuted로 바꿔 해소한다.
-2. **L2 검정**: 남은 DAG로 LMC·순열·엣지 검정을 한다.
-3. **반영**: 엣지마다 데이터 증거(score = 1 − p)를 붙이고 상태를 바꾼다. verified가 되려면 서로 다른 종류의 증거 2개 이상, 데이터 뒷받침, 방향 근거(텍스트·LLM·전문가·실험), 그래프 판정 pass가 모두 필요하다.
+1. **L1 cleanup**: edges that violate the temporal order are marked refuted, and any remaining cycle is resolved by marking its weakest edge refuted.
+2. **L2 tests**: LMC, permutation and edge tests are run on the remaining DAG.
+3. **Update**: each edge gets data evidence (score = 1 − p) and its status is updated. To become verified, an edge needs at least two different kinds of evidence, data support, a directional basis (text, LLM, expert or experiment), and a passing graph verdict.
 
-마케팅 예시에서 LLM이 "매출이 늘면 광고를 늘린다"는 역방향 엣지를 낮은 신뢰도로 제안했다고 하자. 시간 순서(계절 → 광고 → 방문 → 매출)와 어긋나므로 L1에서 반증된다.""",
+In the marketing example, suppose an LLM proposes the reversed edge "higher sales lead to more advertising" with low confidence. It contradicts the temporal order (season → ad → visits → sales), so L1 refutes it.""",
 """SALES = nx.DiGraph([("season", "ad"), ("ad", "visits"), ("visits", "sales"), ("season", "sales")])
 scm = BinarySCM(SALES, {"season": np.array([0.4]), "ad": np.array([0.2, 0.7]), "visits": np.array([0.2, 0.75]),
                         "sales": np.array([0.15, 0.5, 0.45, 0.85])})
@@ -105,18 +105,18 @@ h.add_edge("sales", "ad", evidence=[Evidence(kind=EvidenceKind.LLM_PRIOR, score=
 report, changes = validate_hcg(h, data, time={"season": 0, "ad": 1, "visits": 2, "sales": 3}, n_perm=100)
 print(report.summary()["verdict"], "|", report.notes)
 changes""",
-"""md:이 그래프는 LMC 검정이 2개뿐이라 순열 검정은 판정에 쓰지 않았다(검정력 부족). 시간 순서·데이터·방향 근거를 모두 갖춘 엣지는 verified가 된다. season→sales는 데이터 증거만 있고 방향 근거가 없어서 hypothesis에 머문다. 데이터는 "두 변수가 관련 있다"는 것만 말해 줄 뿐, 방향은 알려 주지 않기 때문이다. 검증 결과는 `validation.json`으로 남긴다.""",
+"""md:This graph has only 2 LMC tests, so the permutation test was not used in the verdict (insufficient power). Edges that have temporal order, data support and a directional basis become verified. season→sales has only data evidence and no directional basis, so it stays a hypothesis: data only say that "the two variables are related", not which way the effect runs. The validation result is saved as `validation.json`.""",
 """path = report.save(RESULTS / "validation" / "sales-demo.json")
 h.save(RESULTS / "validation" / "sales-demo.hcg.json")
 print(path)
 report.mechanisms.round(3)""",
-"""md:## 4. L6 벤치마크
+"""md:## 4. L6 benchmark
 
-파이프라인을 바꿀 때마다 같은 bnlearn 네트워크에서 SHD·SID를 재는 회귀 테스트이다. 인과 탐색 알고리즘은 Step 5에서 만들므로, 여기서는 두 극단(빈 그래프, 정답 그래프)으로 지표의 범위만 확인한다.""",
+This is a regression test that measures SHD and SID on the same bnlearn networks whenever the pipeline changes. Causal discovery algorithms are not part of this notebook, so we only check the range of the metrics with the two extremes (empty graph and true graph).""",
 """names = ("asia", "sachs", "insurance", "alarm")
 truth = {n: sample_bnlearn(n, 100)[0] for n in names}
-empty = benchmark(lambda df: nx.DiGraph(), names=names, n=2000).assign(method="빈 그래프")
-oracle = pd.concat([benchmark(lambda df, g=truth[n]: g.copy(), names=(n,), n=2000) for n in names]).assign(method="정답 그래프")
+empty = benchmark(lambda df: nx.DiGraph(), names=names, n=2000).assign(method="empty graph")
+oracle = pd.concat([benchmark(lambda df, g=truth[n]: g.copy(), names=(n,), n=2000) for n in names]).assign(method="true graph")
 pd.concat([empty, oracle])[["method", "network", "nodes", "edges", "shd", "sid", "f1_directed"]]""",
 ]
 

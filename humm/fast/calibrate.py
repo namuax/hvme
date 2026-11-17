@@ -1,4 +1,4 @@
-"""보정: 지표(정확도·top-1 ECE·Brier·NLL·AUROC)와 temperature scaling."""
+"""Calibration: metrics (accuracy, top-1 ECE, Brier, NLL, AUROC) and temperature scaling."""
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize_scalar
@@ -6,13 +6,13 @@ from scipy.special import log_softmax, softmax
 
 
 def ece_conf(conf: np.ndarray, correct: np.ndarray, bins: int = 10) -> float:
-    """신뢰도 구간별 |정답률 − 평균 신뢰도|의 가중 평균."""
+    """Weighted average of |accuracy − mean confidence| over confidence bins."""
     idx = np.minimum((conf * bins).astype(int), bins - 1)
     return float(sum(abs(correct[idx == b].mean() - conf[idx == b].mean()) * (idx == b).mean() for b in np.unique(idx)))
 
 
 def top_ece(probs, target, bins: int = 10) -> float:
-    """다중 보기용 ECE: 예측 보기의 확률(신뢰도)로 구간을 나눈다. probs는 행렬 또는 보기 수가 다른 배열들의 목록이다."""
+    """ECE for multiple options: bins by the probability (confidence) of the predicted option. probs is a matrix or a list of arrays with differing option counts."""
     conf = np.array([np.max(p) for p in probs])
     correct = np.array([int(np.argmax(p)) == t for p, t in zip(probs, target)], float)
     return ece_conf(conf, correct, bins)
@@ -27,7 +27,7 @@ def reliability(probs, target, bins: int = 10) -> pd.DataFrame:
 
 
 def auroc(score: np.ndarray, y: np.ndarray) -> float:
-    """이진 AUROC(순위 기반). 한쪽 클래스만 있으면 NaN."""
+    """Binary AUROC (rank-based). NaN if only one class is present."""
     pos, neg = score[y == 1], score[y == 0]
     if not len(pos) or not len(neg):
         return float("nan")
@@ -36,8 +36,8 @@ def auroc(score: np.ndarray, y: np.ndarray) -> float:
 
 
 def metrics(probs, target) -> dict:
-    """probs: 문항별 보기 확률(보기 수가 달라도 된다), target: 정답 보기 위치.
-    모든 문항이 보기 2개(noul·이진 choice)이면 첫 보기 확률의 AUROC도 낸다."""
+    """probs: per-item option probabilities (option counts may differ), target: index of the correct option.
+    If every item has exactly 2 options (noul or binary choice), also reports the AUROC of the first option's probability."""
     probs, target = [np.asarray(p, float) for p in probs], np.asarray(target, int)
     p_t = np.array([p[t] for p, t in zip(probs, target)])
     brier = np.array([((p - np.eye(len(p))[t]) ** 2).sum() for p, t in zip(probs, target)])
@@ -48,7 +48,7 @@ def metrics(probs, target) -> dict:
 
 
 def fit_temperature(logits: list[np.ndarray], target: np.ndarray) -> float:
-    """검증셋 NLL을 최소화하는 온도 T (logits / T). 보기 수가 서로 다른 문항을 함께 넣을 수 있다."""
+    """Temperature T (logits / T) minimizing validation NLL. Items with different option counts can be mixed."""
     def nll(log_t):
         t = np.exp(log_t)
         return -np.mean([log_softmax(z / t)[k] for z, k in zip(logits, target)])

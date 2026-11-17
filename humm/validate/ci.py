@@ -1,4 +1,4 @@
-"""조건부 독립 검정. 이산 데이터는 G-검정(층별 우도비), 연속 데이터는 Fisher-z(편상관)를 쓴다."""
+"""Conditional independence tests: G-test (stratified likelihood ratio) for discrete data, Fisher-z (partial correlation) for continuous data."""
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -22,7 +22,7 @@ def _codes(col: pd.Series) -> tuple[np.ndarray, int]:
 
 
 def g_test_codes(a: tuple, b: tuple, s: list) -> float:
-    """정수 코드로 된 변수(코드 배열, 범주 수)로 G-검정을 한다. 모든 층의 분할표를 bincount 한 번으로 만든다."""
+    """G-test on integer-coded variables (code array, number of categories). Builds the contingency tables of all strata with a single bincount."""
     (xa, ka), (xb, kb) = a, b
     z, nz = np.zeros(len(xa), np.int64), 1
     for c, k in s:
@@ -37,12 +37,12 @@ def g_test_codes(a: tuple, b: tuple, s: list) -> float:
 
 
 def g_test(df: pd.DataFrame, a: str, b: str, s=()) -> float:
-    """층(조건 변수 조합)마다 a×b 분할표의 G 통계량과 자유도를 더한다."""
+    """Sum the G statistic and degrees of freedom of the a×b table over strata (conditioning-variable combinations)."""
     return g_test_codes(_codes(df[a]), _codes(df[b]), [_codes(df[c]) for c in s])
 
 
 class CITester:
-    """같은 검정을 반복하지 않도록 결과를 저장한다. (a, b, S)와 (b, a, S)는 같은 검정이다."""
+    """Cache results to avoid repeating a test. (a, b, S) and (b, a, S) are the same test."""
 
     def __init__(self, df: pd.DataFrame, method: str = "auto"):
         self.df = df

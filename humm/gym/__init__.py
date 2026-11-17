@@ -1,4 +1,4 @@
-"""Humm-Gym: 합성 SCM·질의·정답 생성기와 검증기 (Step 3). 정답은 humm.engine이 계산한다."""
+"""Humm-Gym: Synthetic SCM, query and answer generator plus verifier. Answers are computed by humm.engine."""
 from .dataset import MIX, build, generate, read_jsonl, summary, write_jsonl
 from .check import audit
 from .evaluate import eval_cot, eval_direct, summarize as eval_summary

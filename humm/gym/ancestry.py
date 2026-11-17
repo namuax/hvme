@@ -1,13 +1,13 @@
-"""Humm-Gym v3.8 (SFT v2.13): 그래프만 주고 부모·조상(원인)을 묻는 구조 질의(query_type "ancestry").
+"""Humm-Gym: structural queries that give only a graph and ask for parents or ancestors (causes) (query_type "ancestry").
 
-9B 평가표(reports/2026-11-08_humm_lm_9b_sft_v212.md 3.1절)에서 CaLM AR·CA FP·FA가 기반 80–87 → 57로 떨어졌다.
-엔진에 부모·조상 질의가 없어 모델이 causal_graph의 dsep을 불러 'd-분리 아님'을 '원인이다·부모다'로 읽었다.
-엔진에 path 질의를 더하고(humm.lm.tools.run_graph), 이 문항으로 path 호출 궤적을 만든다.
+Motivation: CaLM AR, CA FP and FA dropped from 80-87 (base) to 57 after earlier fine-tuning.
+The engine had no parent/ancestor query, so the model called dsep on causal_graph and read 'not d-separated' as 'is a cause / is a parent'.
+A path query is added to the engine (humm.lm.tools.run_graph), and these items produce path-call trajectories.
 
-묻는 것(meta.ask): parent(직접 원인, 엣지), ancestor(방향 경로), cause(직접 또는 다른 변수를 거쳐 원인 = ancestor).
-오답 문항의 절반 이상은 헷갈리기 쉬운 쌍이다: 부모 질문은 부모가 아닌 조상과 거꾸로 된 쌍, 조상·원인 질문은 거꾸로 된 쌍(b가 a의 조상)과 공통 원인을 가진 쌍.
-표면: 이름은 글자(A, B, …)·무의미 이름·영역 어휘, 엣지는 'A causes B, …' 목록이나 'A has a direct effect on B.' 문장.
-문형은 유형마다 둘 이상이고 하나는 CaLM 문형을 본떴다(벤치 문항은 쓰지 않았다).
+Asked (meta.ask): parent (direct cause, an edge), ancestor (directed path), cause (direct or via other variables = ancestor).
+At least half of the negative items use confusable pairs: for parent questions, non-parent ancestors and reversed pairs; for ancestor/cause questions, reversed pairs (b is an ancestor of a) and pairs with a common cause.
+Surface: names are letters (A, B, ...), meaningless names or domain vocabulary; edges are an 'A causes B, ...' list or 'A has a direct effect on B.' sentences.
+Each type has two or more templates, one modeled on the CaLM template (no benchmark items are used).
 """
 import networkx as nx
 
@@ -27,7 +27,7 @@ QUESTIONS = {
 
 
 def _pairs(g, ask):
-    """(양성 쌍, 헷갈리는 음성 쌍, 나머지 음성 쌍)."""
+    """(positive pairs, confusable negative pairs, remaining negative pairs)."""
     nodes = list(g)
     yes = [(a, b) for a in nodes for b in nodes if a != b and (g.has_edge(a, b) if ask == "parent" else nx.has_path(g, a, b))]
     rev = [(b, a) for a, b in yes]

@@ -1,4 +1,4 @@
-"""HF transformers 로컬 공급자. GPU 한 장에 모델 하나를 올리는 것을 기본으로 한다(device="cuda:0")."""
+"""Local HF transformers provider. By default, one model is loaded on one GPU (device="cuda:0")."""
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
@@ -7,7 +7,7 @@ class HFProvider:
     supports_logits = True
 
     def __init__(self, model_id: str, device: str = "cuda:0", dtype=torch.bfloat16, batch_size: int = 8, quant: str = ""):
-        """quant(Step 12): "" bf16, "int8"·"nf4" bitsandbytes 가중치 양자화(계산은 dtype)."""
+        """quant: "" is bf16; "int8" and "nf4" use bitsandbytes weight quantization (compute in dtype)."""
         self.name = model_id
         self.batch_size = batch_size
         self.tok = AutoTokenizer.from_pretrained(model_id, padding_side="left")

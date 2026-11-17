@@ -1,8 +1,8 @@
-"""텍스트용 가상 LLM: 합성 코퍼스의 정답을 알고 있지만 오류율만큼 틀린다. GPU 없이 파이프라인을 개발·실험한다.
+"""Simulated LLM for text: knows the ground truth of the synthetic corpus but errs at the given error rate. Lets you develop and experiment with the pipeline without a GPU.
 
-- 추출: 프롬프트 안의 문장마다 정답 주장을 돌려준다. error 확률로 빠뜨리고, error/2 확률로 원인·결과를 뒤집고, 상관 주장을 인과로 잘못 읽는다.
-- 정규화: 정답 별칭 사전대로 묶되, error 확률로 표현 하나를 따로 떼어 놓는다.
-- 반사실 검증: 정답 그래프에서 원인이 결과의 조상이면 '예'(0.9)로 답하되 error 확률로 뒤집는다.
+- Extraction: returns the ground-truth claim for each sentence in the prompt. Omits it with probability error, swaps cause and effect with probability error/2, and misreads correlation claims as causal.
+- Canonicalization: groups according to the ground-truth alias dictionary, but with probability error splits one expression off on its own.
+- Counterfactual verification: if the cause is an ancestor of the effect in the true graph, answers 'yes' (0.9), flipped with probability error.
 """
 import json
 import re

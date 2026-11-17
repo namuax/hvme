@@ -8,8 +8,8 @@ from humm.fast.calibrate import apply_temperature
 def test_temperature_fixes_overconfidence():
     rng = np.random.default_rng(0)
     target = rng.integers(0, 2, 4000)
-    true_logit = np.where(target == 0, 1.0, -1.0) + rng.normal(0, 1.5, 4000)  # 정답 쪽으로 약하게 기운 로짓
-    logits = [np.array([z, -z]) * 4 for z in true_logit]  # 4배 과신
+    true_logit = np.where(target == 0, 1.0, -1.0) + rng.normal(0, 1.5, 4000)  # logits weakly tilted toward the correct option
+    logits = [np.array([z, -z]) * 4 for z in true_logit]  # 4x overconfident
     before = metrics(np.stack(apply_temperature(logits, 1.0)), target)
     t = fit_temperature(logits, target)
     after = metrics(np.stack(apply_temperature(logits, t)), target)
@@ -26,7 +26,7 @@ def test_network_items():
     g = nx.DiGraph([("smoke", "lung"), ("lung", "dysp"), ("asia", "tub")])
     pw = pairwise_items("asia", g)
     assert len(pw) == 3 and all(it["labels"] == ["A", "B"] for it in pw)
-    for it in pw:  # 정답 보기가 참 방향과 맞는다
+    for it in pw:  # the correct option matches the true direction
         a = it["prompt"].split("A. ")[1].split(" causes ")[0]
         assert (a in {u for u, _ in g.edges}) == (it["target"][0] == 1.0)
     vf = verify_items("asia", g, n=4)

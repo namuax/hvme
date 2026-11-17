@@ -1,29 +1,23 @@
-"""도구 사용 풀이 궤적 (Step 9 SFT v2). 대화 메시지 목록으로 만들어 채팅 템플릿(tools=TOOLS)으로 학습한다.
+"""Tool-use solution trajectories. Built as lists of chat messages and trained with the chat template (tools=TOOLS).
 
-- 수치 질의: ① 변수·상태·그래프 → ② 질의 유형과 비교 대상 → ③ 추정식 → causal_engine 호출 → (도구 결과) → ④ 값의 부호로 결론.
-  숫자는 모델이 계산하지 않는다. 확률 문장은 문맥의 숫자를 그대로 옮긴다(meta.call).
-- 구조 질의(dsep·backadj·identify·corr2cause)와 det_cf: 도구 없이 humm.lm.solutions의 풀이 한 턴.
-
-v2.1: CLadder식 문항(meta.style "bare")은 'X / not X' 표기 규약과 문장 → 확률 인자 대응을 적는다.
-오류 복구 궤적(repair)은 첫 호출에 흔한 실수(상태 선언 불일치, 문장식 표기, 엣지 표기)를 넣고 오류 메시지를 받아 고쳐 다시 부른다.
-
-v2.2: Gym v3.3 corr2cause(meta.call)는 causal_discovery 호출 궤적이다. 가설 문장을 도구의 가설 종류로 옮기는 것까지 모델이 하고,
-골격·v-구조·동치류와 판정은 도구가 한다. 오류 복구는 관계 하나를 빠뜨린 첫 호출이다.
-
-v2.3: 도구가 둘이 되자 수치 질문에 causal_discovery를 부르는 오류가 생겼다(named). 수치 질의의 오류 복구에 '도구 선택'을 더한다:
-확률 문장을 causal_discovery에 넘겨 오류를 받고 causal_engine으로 바꾼다. 도구 없는 CoT판 corr2cause(cot_examples)는 손풀이를 보존한다.
-
-v2.4: v2.3은 오류를 맞게 진단하고도 같은 인자로 다시 불렀다(상태 1/0 문항). 도구 선택 복구는 named 문항에만 두고, 상태 1/0 문항에서
-상태를 yes/no로 선언한 실수(digits)와, 진단만 하고 인자를 그대로 다시 넣어 같은 오류를 두 번 받은 뒤 실제로 고치는 궤적(repeat)을 더한다.
-
-v2.5: 그래프만 주어지는 구조 질의(dsep·backadj·identify)는 causal_graph 호출 궤적이다. 모델은 그래프·질의·대상 변수를 옮기고,
-경로 점검과 판정은 도구가 한다. 손풀이는 도구 없는 CoT판(cot_examples)으로 보존한다. ate_score 결론에는 값과 구간 경계의 비교를 적는다.
-v2.7: named 문항의 처치는 '조건부 확률 문장에서 기준 다음에 나오는 상태'라고 적는다(Gym v3.5, 처치 상태 이름을 맞바꾼 문항과 함께).
-v2.8: 처치 변수 상태를 선언과 다른 yes/no로 쓰고, 선언 상태를 알려 주는 엔진 오류를 받아 고치는 복구 궤적(undeclared)을 더한다.
-v2.9: 복구 실수 넷을 더한다. 처치 변수를 yes/no로 선언하고 확률에는 본문 상태를 씀(declared), nde·nie 매개 집합 누락(mediators),
-결과를 그래프 노드와 다른 이름으로 따로 선언(alias), 조건 하나의 처치 상태를 잘못 옮겨 같은 조건이 두 번 나옴(duplicate).
-det_cf는 causal_graph를 잘못 부른 뒤(손실 제외) 오류를 받고 손풀이로 돌아가는 궤적을 더한다(detcf_messages).
-v2.13: 부모·조상은 causal_graph path(ancestry_messages). v2.14: 앞문·도구변수·교란 쌍 식별은 frontdoor·instrument·confounded(graphid_messages).
+- Numeric queries: 1 variables, states, graph -> 2 query type and comparison target -> 3 estimand -> causal_engine call -> (tool result) -> 4 conclusion from the sign of the value.
+  The model does not compute numbers. Probability statements copy the numbers in the context (meta.call).
+- CLadder-style items (meta.style "bare") state the 'X / not X' notation convention and the statement -> probability-argument mapping.
+- Error-recovery trajectories (repair) put a common mistake in the first call (state declaration mismatch, sentence-style notation, edge notation), receive the error message, fix it and call again.
+- Gym corr2cause (meta.call) is a causal_discovery call trajectory. The model translates the hypothesis sentence into the tool's hypothesis kind;
+  skeleton, v-structures, equivalence class and verdict come from the tool. Error recovery is a first call that omits one relation.
+- With two tools, numeric questions can wrongly call causal_discovery (named items). Recovery for numeric queries adds 'tool choice':
+  the probability statements are passed to causal_discovery, the error is received, and the call is switched to causal_engine. The tool-free CoT corr2cause variant (cot_examples) keeps the hand solution.
+- A tool-choice recovery that only diagnoses the error and re-sends the same arguments does not fix anything, so tool-choice recovery is limited to named items. For items with states 1/0, add the mistake of
+  declaring states as yes/no (digits), and trajectories that diagnose but re-send the same arguments, receive the same error twice and only then really fix it (repeat).
+- Structure queries given only a graph (dsep, backadj, identify) are causal_graph call trajectories. The model transcribes the graph, query and target variables;
+  path checking and the verdict come from the tool. Hand solutions are kept as the tool-free CoT variant (cot_examples). The ate_score conclusion states the comparison of the value with the bucket boundaries.
+- For named items the treatment is described as 'the state that follows the baseline in the conditional probability statements' (together with items whose treatment-state names are swapped).
+- Recovery trajectories also cover treatment states written as yes/no that differ from the declaration, with an engine error that reveals the declared states (undeclared).
+- More recovery mistakes: treatment declared as yes/no while probabilities use the text's states (declared), a missing mediator set for nde/nie (mediators),
+  the outcome declared separately under a name different from the graph node (alias), and a treatment state mistranscribed in one condition so the same condition appears twice (duplicate).
+  For det_cf, a trajectory where causal_graph is wrongly called (excluded from the loss), the error is received and the solution returns to the hand solution (detcf_messages).
+- Parents/ancestors use causal_graph path (ancestry_messages). Front-door, instrument and confounded-pair identification use frontdoor, instrument and confounded (graphid_messages).
 """
 import copy
 import re
@@ -43,7 +37,7 @@ GRAPH = ("dsep", "backadj", "identify")
 
 
 def _call_for_score(d: dict) -> dict:
-    """ate_score(v2 생성기)는 meta.call이 없어 전체 확률표로 호출 인자를 만든다."""
+    """ate_score items have no meta.call, so the call arguments are built from the full probability table."""
     from ..gym.v3 import cpt_statements, make_call
     m = d["meta"]
     lex = Lexicon({k: tuple(v) for k, v in m["vocab"].items()}, d["lang"])
@@ -83,22 +77,22 @@ REPAIRS = ("states", "phrase", "edge", "tool", "digits")
 
 
 def _corrupt(call: dict, kind: str, ko: bool) -> tuple[dict, str]:
-    """흔한 첫 호출 실수 하나를 넣은 인자와, 오류를 보고 고칠 때 쓸 설명."""
+    """Arguments with one common first-call mistake, and the explanation to use when fixing it after seeing the error."""
     bad, t = copy.deepcopy(call), (lambda a, b: a if ko else b)
-    if kind == "digits":  # 상태 1/0 문항에서 상태를 yes/no로 선언하고 처치·결과도 yes/no로 씀(확률 문장은 1/0 그대로)
+    if kind == "digits":  # on 1/0-state items, declare states as yes/no and write treatment/outcome as yes/no (probability statements stay 1/0)
         yn = {"1": "yes", "0": "no"}
         bad["variables"] = {v: ["yes", "no"] for v in bad["variables"]}
         bad |= {k: {v: yn[s] for v, s in bad[k].items()} for k in ("treatment", "baseline", "outcome", "fixed") if k in bad}
         return bad, t("확률 문장은 상태를 1/0으로 쓰는데 상태 선언은 [yes, no]로 했다. 모든 변수의 상태 선언을 [1, 0]으로 바꾸고 처치·결과도 1/0으로 쓴다. 확률 문장은 그대로 둔다.",
                       "The probabilities write the states as 1/0, but I declared them as [yes, no]. I declare the states of every variable as [1, 0] "
                       "and write the treatment and outcome with 1/0, keeping the probabilities unchanged.")
-    if kind == "states":  # CLadder식으로 상태를 'kwox / not kwox'로 선언하고 확률은 yes/no로 씀
+    if kind == "states":  # declare states CLadder-style as 'kwox / not kwox' but write probabilities with yes/no
         v = next(iter(bad["outcome"]))
         a, b = bad["variables"][v]
         bad["variables"][v] = [v, f"not {v}"]
         return bad, t(f"{v}의 상태를 [{v}, not {v}]로 선언했지만 확률 문장에서는 {v}={a}처럼 썼다. 상태 선언을 [{a}, {b}]로 맞춘다.",
                       f"I declared the states of {v} as [{v}, not {v}] but wrote {v}={a} in the probabilities. Declare its states as [{a}, {b}] to match.")
-    if kind == "undeclared":  # v2.8: 처치 변수 상태를 선언과 다른 yes/no로 씀(CLadder 'smoking=yes', 선언은 smoker / non-smoker)
+    if kind == "undeclared":  # treatment state written as yes/no, different from the declaration (CLadder 'smoking=yes', declared smoker / non-smoker)
         (x, _), = bad["treatment"].items()
         a, b = bad["variables"][x]
         yn = {a: "yes", b: "no"}
@@ -107,13 +101,13 @@ def _corrupt(call: dict, kind: str, ko: bool) -> tuple[dict, str]:
         bad |= {k: {x: yn[bad[k][x]]} for k in ("treatment", "baseline")}
         return bad, t(f"{x}의 상태는 [{a}, {b}]로 선언했는데 확률 문장과 처치에 yes/no를 썼다. 오류가 알려 준 선언 상태대로 {x}={a}, {x}={b}로 쓴다.",
                       f"I declared the states of {x} as [{a}, {b}] but wrote yes/no in the probabilities and the treatment. As the error says, I use the declared states {x}={a} and {x}={b}.")
-    if kind == "declared":  # v2.9: undeclared의 반대. 처치 변수를 yes/no로 선언하고 확률·처치는 본문 상태(CLadder 'manager=sign', 선언은 yes / no)
+    if kind == "declared":  # opposite of undeclared: treatment declared as yes/no while probabilities and treatment use the text's states (CLadder 'manager=sign', declared yes / no)
         (x, _), = bad["treatment"].items()
         a, b = bad["variables"][x]
         bad["variables"][x] = ["yes", "no"]
         return bad, t(f"{x}의 상태를 [yes, no]로 선언했는데 확률 문장과 처치는 {x}={a}, {x}={b}로 썼다. 선언을 문제의 상태 [{a}, {b}]로 바꾼다.",
                       f"I declared the states of {x} as [yes, no] but wrote {x}={a} and {x}={b} in the probabilities and the treatment. I declare its states as the problem's [{a}, {b}].")
-    if kind == "alias":  # v2.9: 결과를 그래프 노드와 다른 이름으로 따로 선언(CLadder 'recovering from the disease' / 'disease')
+    if kind == "alias":  # outcome declared separately under a name different from the graph node (CLadder 'recovering from the disease' / 'disease')
         (y, o), = bad["outcome"].items()
         al = t(f"{y} 결과", f"{y} outcome")
         bad["variables"][al] = bad["variables"][y]
@@ -121,12 +115,12 @@ def _corrupt(call: dict, kind: str, ko: bool) -> tuple[dict, str]:
         bad["outcome"] = {al: o}
         return bad, t(f"결과를 그래프 노드 {y}와 다른 이름 '{al}'로 따로 선언해 그래프에 없는 변수가 생겼다. 확률 문장과 결과도 그래프 노드 이름 {y}로 쓰고 '{al}'은 지운다.",
                       f"I declared the outcome under a name, '{al}', that differs from the graph node {y}, so it is in no edge. I write the probabilities and the outcome with the node name {y} and drop '{al}'.")
-    if kind == "duplicate":  # v2.9: 조건부 문장 하나의 처치 상태를 잘못 옮겨 같은 조건이 두 번 나옴
+    if kind == "duplicate":  # one conditional statement's treatment state is mistranscribed, so the same condition appears twice
         i, j, x, a, b = _duplicate(call)
         bad["probabilities"][j] = re.sub(rf"(?<=[|,])(\s*){re.escape(x)}={re.escape(b)}(?=\s*[,)])", lambda g: f"{g[1]}{x}={a}", call["probabilities"][j])
         return bad, t(f"'{call['probabilities'][i]}'와 '{bad['probabilities'][j]}'는 같은 조건이다. 문제는 조건마다 확률을 한 번만 주므로 두 번째 문장의 상태를 잘못 옮겼다. 문맥을 다시 보면 그 문장의 조건은 {x}={b}이다.",
                       f"'{call['probabilities'][i]}' and '{bad['probabilities'][j]}' have the same condition. The problem gives each condition once, so I copied a state wrongly in the second; rereading the context, its condition is {x}={b}.")
-    if kind == "typo":  # v2.10: 무의미 변수명을 옮겨 적다 철자를 틀림(Gym 오답 fjfq → fjq). 선언·확률 문장·엣지 중 한 곳
+    if kind == "typo":  # a meaningless variable name is misspelled while transcribing (fjfq -> fjq); in the declaration, probability statements or one edge
         names = [v for v in bad["variables"] if any(v in e.split(" -> ") for e in bad["graph"])]
         v = names[sum(map(ord, "".join(names))) % len(names)]
         w, where = _typo(v), sum(map(ord, v)) % 3
@@ -146,7 +140,7 @@ def _corrupt(call: dict, kind: str, ko: bool) -> tuple[dict, str]:
         bad["graph"][i] = " -> ".join(w if x == v else x for x in bad["graph"][i].split(" -> "))
         return bad, t(f"엣지 '{bad['graph'][i]}'에 문제의 변수 {v}를 {w}로 잘못 옮겨 적었다. '{call['graph'][i]}'로 쓴다.",
                       f"In the edge '{bad['graph'][i]}' I copied the question's variable {v} wrongly as {w}. I write '{call['graph'][i]}'.")
-    if kind == "phrase":  # name=state 대신 문장처럼 씀
+    if kind == "phrase":  # written like a sentence instead of name=state
         i = max(range(len(bad["probabilities"])), key=lambda j: len(bad["probabilities"][j]))
         body, num = STMT.match(bad["probabilities"][i]).groups()[:2]
         wrong = re.sub(r"([^,|=]+?)=([^,|]+)", lambda g: f"{g[1]} is {g[2]}", body)
@@ -159,7 +153,7 @@ def _corrupt(call: dict, kind: str, ko: bool) -> tuple[dict, str]:
 
 
 def _typo(v: str) -> str:
-    """철자 실수 하나: 글자 빠짐, 글자 끼어듦, 이웃 글자 바꿈, 공백(Gym 오답의 fjq·bczcz·hvjx·cqh x)."""
+    """One spelling mistake: a dropped character, an inserted character, swapped neighbouring characters, or a space."""
     k = len(v) // 2
     cands = [v[:k] + v[k + 1:], v[:k] + v[k - 1:], v[:k - 1] + v[k] + v[k - 1] + v[k + 1:], v[:k] + " " + v[k:]]
     i = sum(map(ord, v)) % 4
@@ -167,7 +161,7 @@ def _typo(v: str) -> str:
 
 
 def _duplicate(call: dict) -> tuple | None:
-    """처치 상태만 다르고 값이 다른 두 조건부 문장 (i, j, 처치 변수, i의 상태, j의 상태). 없으면 None."""
+    """Two conditional statements that differ only in the treatment state and have different values: (i, j, treatment variable, state of i, state of j). None if there are none."""
     if not call.get("treatment"):
         return None
     (x, _), = call["treatment"].items()
@@ -180,15 +174,15 @@ def _duplicate(call: dict) -> tuple | None:
 
 
 def _given(call: dict, sents: list[str]) -> list[str]:
-    """CLadder식 문장과 도구 인자의 대응(결합·조건부·주변)."""
+    """Mapping between CLadder-style statements and tool arguments (joint, conditional, marginal)."""
     kind = lambda p: "conditional" if "|" in p else "joint" if "," in p.split(")")[0] else "marginal"
     return ["   Given probabilities:"] + [f"   - \"{s}\" → {p} ({kind(p)})" for s, p in zip(sents, call["probabilities"])]
 
 
 def tool_messages(d: dict, repair: str | None = None, repeat: bool = False) -> list[dict]:
-    """수치 질의 하나의 도구 사용 대화: user → assistant(호출) → tool → assistant(결론).
-    repair: 첫 호출에 실수를 넣어 user → assistant(잘못된 호출) → tool(오류) → assistant(고친 호출) → tool → assistant(결론).
-    repeat: 오류 뒤 진단만 하고 같은 인자로 다시 부른 턴(손실 제외)과 두 번째 오류를 넣고, 그다음 턴에서 실제로 고친다."""
+    """Tool-use conversation for one numeric query: user -> assistant (call) -> tool -> assistant (conclusion).
+    repair: put a mistake in the first call: user -> assistant (wrong call) -> tool (error) -> assistant (fixed call) -> tool -> assistant (conclusion).
+    repeat: after the error, add a turn that only diagnoses and re-calls with the same arguments (excluded from the loss) plus a second error, then really fix it in the next turn."""
     m, ko = d["meta"], d["lang"] == "ko"
     qt = "ate" if d["query_type"] == "ate_score" else d["query_type"]
     call = m.get("call") or _call_for_score(d)
@@ -208,7 +202,7 @@ def tool_messages(d: dict, repair: str | None = None, repeat: bool = False) -> l
         asks = t("질문은 값이 어느 구간에 드는지 묻는다", "the question asks which level the value falls in")
     bare = m.get("style") == "bare"
     note = [f"   Notation: a bare name such as '{y}' means {y}=yes, and 'not {y}' means {y}=no."] if bare else []
-    if m.get("form") == "named":  # v3.5: 처치는 조건부 확률 문장에서 기준 다음에 나오는 상태, 결과는 확률 문장이 다루는 상태다
+    if m.get("form") == "named":  # the treatment is the state that follows the baseline in conditional probability statements; the outcome is the state the probability statements cover
         bv = call["baseline"][x]
         note = [t(f"   질문은 변수 {x}, {y}의 상태를 밝히지 않는다. 조건부 확률 문장은 {x}의 기준 상태를 먼저, 처치 상태를 나중에 쓰므로 처치는 {x}={tv}(기준 {x}={bv})이다. 결과는 확률 문장이 다루는 상태인 {y}={o}이다.",
                   f"   The question names {x} and {y} without states. The conditional probabilities list the baseline state of {x} first and the treatment state second, so the treatment is {x}={tv} (baseline {x}={bv}). The outcome is the state the probabilities are stated for, {y}={o}.")]
@@ -233,24 +227,24 @@ def tool_messages(d: dict, repair: str | None = None, repeat: bool = False) -> l
                  f"4) The engine value is {val:+.4f}, which is {'positive' if val > 0 else 'negative'}. The question asks about {'an increase (positive)' if up else 'a decrease (negative)'}, so the answer is {'yes' if holds else 'no'}.")
     tc = lambda a, f="causal_engine": [{"type": "function", "function": {"name": f, "arguments": a}}]
     msgs = [{"role": "user", "content": render(d, "tool")}, {"role": "assistant", "content": first, "tool_calls": tc(call)}]
-    if repair == "tool":  # 도구 선택 실수: 확률 문장을 causal_discovery의 관계로 넘긴다
+    if repair == "tool":  # tool-choice mistake: pass the probability statements as causal_discovery relations
         bad = {"variables": list(call["variables"]), "relations": call["probabilities"], "hypothesis": "cause", "a": next(iter(call.get("treatment", call["outcome"]))), "b": y}
         err = respond(format_call(bad, "causal_discovery"))
         why = t("causal_discovery는 상관·독립 관계만 읽는 도구이다. 이 질문은 확률 값이 주어진 수치 질의이므로 causal_engine을 쓴다. "
                 "확률 문장은 probabilities 인자로 옮기고 변수 상태, 그래프, 질의 유형, 처치, 결과를 함께 채운다.",
                 "causal_discovery only reads correlation and independence relations. This question gives probabilities, so I use causal_engine: "
                 "the probability statements go into probabilities, together with the variable states, the graph, the query type, the treatment and the outcome.")
-        msgs[1] |= {"tool_calls": tc(bad, "causal_discovery"), "train": False}  # 잘못 고르는 호출 자체는 배우지 않는다
+        msgs[1] |= {"tool_calls": tc(bad, "causal_discovery"), "train": False}  # the wrongly chosen call itself is not learned
     elif repair:
         bad, why = _corrupt(call, repair, ko)
-        err = respond(format_call(bad), repair=False)  # v2.15 엔진 보정(상태 재선언·엣지 보강) 전의 오류로 복구를 배운다
+        err = respond(format_call(bad), repair=False)  # learn recovery from the error as it was before the engine's automatic corrections (state redeclaration, edge completion)
         msgs[1]["tool_calls"] = tc(bad)
     if repair:
         assert err.startswith("error:"), err
         fix = t(f"4) 도구가 오류를 돌려주었다. {why}" + ("" if repair == "tool" else " 인자를 고쳐 다시 호출한다."),
                 f"4) The tool returned an error. {why}" + ("" if repair == "tool" else " I call it again with the corrected arguments."))
         msgs += [{"role": "tool", "content": err}]
-        if repeat:  # 진단은 맞게 하고 인자는 그대로 둔 재호출(v2.3의 실패 모양, 배우지 않는다) → 같은 오류 → 실제로 고친다
+        if repeat:  # a re-call with a correct diagnosis but unchanged arguments (a failure pattern, not learned) -> same error -> really fix it
             msgs += [{"role": "assistant", "content": fix, "tool_calls": msgs[1]["tool_calls"], "train": False}, {"role": "tool", "content": err}]
             fix = t(f"5) 같은 오류가 다시 났다. 앞 호출의 인자가 첫 호출과 똑같아 고친 것이 없었다. {why} 이번에는 그 부분을 실제로 바꾼 인자로 호출한다.",
                     f"5) The same error came back: the previous call repeated the first call's arguments unchanged. {why} This time I actually change that part of the arguments.")
@@ -269,7 +263,7 @@ HYP_MEANING = {
 
 
 def discovery_messages(d: dict, repair: bool = False) -> list[dict]:
-    """corr2cause(v3.3) 하나의 도구 사용 대화. repair: 첫 호출에서 주변 관계 하나를 빠뜨리고 오류를 받아 고친다."""
+    """Tool-use conversation for one corr2cause item. repair: the first call omits one marginal relation, receives the error and fixes it."""
     call, ko = d["meta"]["call"], d["lang"] == "ko"
     t = lambda a, b: a if ko else b
     h, a, b = call["hypothesis"], call["a"], call["b"]
@@ -293,7 +287,7 @@ def discovery_messages(d: dict, repair: bool = False) -> list[dict]:
     msgs = [{"role": "user", "content": render(d, "tool")}, {"role": "assistant", "content": first, "tool_calls": tc(call)}]
     if repair:
         marg = [r for r in call["relations"] if "given" not in r and "주어지면" not in r]
-        drop = marg[sum(map(ord, d["id"])) % len(marg)]  # 빠뜨리는 위치는 문항마다 다르게(늘 첫 관계면 그 자리를 외운다)
+        drop = marg[sum(map(ord, d["id"])) % len(marg)]  # vary the omitted position per item (if it were always the first relation, the model would memorize that slot)
         err = respond(format_call(call | {"relations": [r for r in call["relations"] if r != drop]}, "causal_discovery"))
         assert err.startswith("error:"), err
         msgs[1]["tool_calls"] = tc(call | {"relations": [r for r in call["relations"] if r != drop]})
@@ -305,7 +299,7 @@ def discovery_messages(d: dict, repair: bool = False) -> list[dict]:
 
 
 def graph_call(d: dict) -> dict:
-    """구조 질의의 causal_graph 인자(변수 이름은 문맥의 이름)."""
+    """causal_graph arguments for a structure query (variable names are those in the context)."""
     w, m, qt = Writer(d), d["meta"], d["query_type"]
     call = {"variables": [w.n(v) for v in sorted(w.g.nodes)], "graph": [f"{w.n(u)} -> {w.n(v)}" for u, v in sorted(w.g.edges)]}
     call |= {"unobserved": [w.n(v) for v in sorted(d["latent"])]} if d.get("latent") else {}
@@ -316,7 +310,7 @@ def graph_call(d: dict) -> dict:
 
 
 def graph_messages(d: dict, repair: bool = False) -> list[dict]:
-    """구조 질의 하나의 causal_graph 사용 대화. repair: 첫 호출의 엣지 표기를 '→'로 써서 오류를 받고 고친다."""
+    """causal_graph conversation for one structure query. repair: the first call writes edges with '→', receives the error and fixes it."""
     w, m, qt, ko = Writer(d), d["meta"], d["query_type"], d["lang"] == "ko"
     t = lambda a, b: a if ko else b
     call = graph_call(d)
@@ -359,7 +353,7 @@ def graph_messages(d: dict, repair: bool = False) -> list[dict]:
 
 
 def detcf_messages(d: dict) -> list[dict]:
-    """v2.9: det_cf를 causal_graph로 부른 실수(손실 제외) → 오류 → 도구 없이 손풀이."""
+    """Mistake of calling causal_graph for det_cf (excluded from the loss) -> error -> hand solution without tools."""
     w, m, ko = Writer(d), d["meta"], d["lang"] == "ko"
     t = lambda a, b: a if ko else b
     bad = {"variables": [w.n(v) for v in sorted(w.g.nodes)], "graph": [f"{w.n(u)} -> {w.n(v)}" for u, v in sorted(w.g.edges)],
@@ -386,8 +380,8 @@ PROB_ESTIMAND = {
 
 
 def prob_messages(d: dict) -> list[dict]:
-    """v2.12: 값을 JSON으로 묻는 문항(Gym v3.7)의 도구 궤적. ETT의 PROB는 엔진의 'ETT =' 줄(실제 − 반사실), PN·PS는 bound,
-    확률이 없는 문항은 빈 확률 목록, 매개 변수를 밝히지 않은 nde·nie는 빈 매개 집합으로 부른다."""
+    """Tool trajectory for items that ask for the value as JSON. ETT's PROB is the engine's 'ETT =' line (actual - counterfactual), PN/PS are bounds,
+    items without probabilities use an empty probability list, and nde/nie that do not name mediators are called with an empty mediator set."""
     m, qt, call = d["meta"], d["query_type"], d["meta"]["call"]
     var = ", ".join(f"{k}({'/'.join(v)})" for k, v in call["variables"].items())
     edges = ", ".join(e.replace(" -> ", " → ") for e in call["graph"])
@@ -423,7 +417,7 @@ ASK = {"parent": "whether {a} is a parent (direct cause) of {b}", "ancestor": "w
 
 
 def ancestry_messages(d: dict) -> list[dict]:
-    """v2.13: 부모·조상 질의(Gym v3.8)의 causal_graph path 궤적. d-분리(독립 여부)는 원인 여부가 아니므로 path를 부른다."""
+    """causal_graph path trajectory for parent/ancestor queries. d-separation (independence) is not the same as being a cause, so path is called."""
     m, call = d["meta"], d["meta"]["call"]
     a, b = call["a"], call["b"]
     first = "\n".join([f"1) Variables: {', '.join(call['variables'])}. Direct causal edges: {', '.join(e.replace(' -> ', ' → ') for e in call['graph'])}.",
@@ -452,7 +446,7 @@ GRAPHID = {"frontdoor": ("which option set satisfies the front-door criterion fo
 
 
 def graphid_messages(d: dict) -> list[dict]:
-    """v2.14: 앞문·도구변수·교란 쌍 식별(Gym v3.9)의 causal_graph 궤적. 질의를 질문에 맞게 고르고 보기를 sets로, 교란 쌍을 confounded로 옮긴다."""
+    """causal_graph trajectory for front-door, instrument and confounded-pair identification. The query is chosen to match the question; options go into sets and confounded pairs into confounded."""
     m, call = d["meta"], d["meta"]["call"]
     a, b = call["a"], call["b"]
     what, how = (x.format(a=a, b=b) for x in GRAPHID[m["ask"]])
@@ -495,13 +489,13 @@ def messages(d: dict, repair: str | None = None, repeat: bool = False) -> list[d
 
 
 def _repairs(m: dict, v29: bool = True) -> tuple:
-    """문항 표면에 맞는 첫 호출 실수 후보. CLadder식은 상태 선언, 상태 1/0은 yes/no 선언, 도구 선택은 이름 문형에만(v2.4).
-    v2.8: 처치 상태가 yes/no·1/0이 아니면 선언에 없는 yes/no를 쓰는 실수(undeclared)를 더한다.
-    v2.9: 같은 조건에 yes/no 선언(declared), 같은 조건 두 번(duplicate), 결과 다른 이름(alias)을 더한다(v29=False면 v2.8 후보).
-    v2.9의 nde·nie 매개 집합 누락(mediators)은 v2.12 엔진이 빈 매개 집합을 경로에서 찾아 오류가 아니게 되어 뺐다."""
+    """Candidate first-call mistakes that fit the item surface. CLadder-style items get state declaration, 1/0-state items get yes/no declaration, tool choice applies only to named items.
+    If the treatment state is not yes/no or 1/0, add the mistake of using an undeclared yes/no (undeclared).
+    Also adds yes/no declaration (declared), the same condition twice (duplicate) and a different outcome name (alias); with v29=False only the earlier candidates are used.
+    A missing mediator set for nde/nie (mediators) is left out because the engine now finds an empty mediator set from the paths, so it is no longer an error."""
     call = m.get("call", {})
     und = ("undeclared", "declared")[:1 + v29] if call.get("treatment") and not set(call["variables"][next(iter(call["treatment"]))]) & {"yes", "no", "1", "0"} else ()
-    und += v29 * (("duplicate",) * bool(call and _duplicate(call)) + ("alias",) * bool(call.get("treatment")))  # 고친 엔진은 엣지 없는 변수를 불일치일 때만 짚는다
+    und += v29 * (("duplicate",) * bool(call and _duplicate(call)) + ("alias",) * bool(call.get("treatment")))  # the fixed engine flags edge-less variables only on a mismatch
     if m.get("style") == "bare":
         return ("states", "states", "phrase", "edge", *und)
     if m.get("form") == "named":
@@ -512,14 +506,14 @@ def _repairs(m: dict, v29: bool = True) -> tuple:
 
 
 def tool_examples(items: list[dict], repair: float = 0.0, seed: int = 0, repeat: float = 0.0, v29: bool = True) -> list[dict]:
-    """repair: 수치 질의 중 오류 복구 궤적으로 만들 비율(실수 종류는 _repairs). 호출이 두 번 들어가므로 확률 문장이 8개 이하인 문항(최소 문맥)에만 넣는다.
-    repeat: 복구 궤적 중 같은 오류를 두 번 받은 뒤 고치는 궤적의 비율(별도 난수라 실수 종류의 흐름은 그대로다).
-    v29=False: v2.9 복구 후보와 det_cf 도구 오선택 복구를 빼 v2.8 예제를 그대로 만든다(학습 잡음 측정용)."""
+    """repair: fraction of numeric queries to turn into error-recovery trajectories (mistake kinds come from _repairs). The call appears twice, so only items with at most 8 probability statements (minimal context) are used.
+    repeat: fraction of recovery trajectories that receive the same error twice before fixing it (uses a separate RNG, so the sequence of mistake kinds is unchanged).
+    v29=False: leave out the later recovery candidates and the det_cf tool-misselection recovery to reproduce the earlier examples exactly (for measuring training noise)."""
     rng = np.random.default_rng(seed)
     kinds = [str(rng.choice(_repairs(d["meta"], v29)))
              if len(d["meta"].get("call", {}).get("probabilities", [])) <= 8 and rng.random() < repair else None for d in items]
     kinds = [k if d["query_type"] in NUMERIC else "missing" if k and "call" in d["meta"] else "edge" if k and d["query_type"] in GRAPH and d["graph"]
-             else "detcf" if k and v29 and d["query_type"] == "det_cf" else None for d, k in zip(items, kinds)]  # v2.9: det_cf는 도구 오선택 복구(난수 흐름은 그대로 둔다)
+             else "detcf" if k and v29 and d["query_type"] == "det_cf" else None for d, k in zip(items, kinds)]  # det_cf gets tool-misselection recovery (the RNG sequence is unchanged)
     twice = np.random.default_rng([seed, 1]).random(len(items)) < repeat
     twice = [bool(r) and k not in (None, "tool", "missing", "detcf") and d["query_type"] in NUMERIC for d, k, r in zip(items, kinds, twice)]
     return [{"id": d["id"], "messages": messages(d, k, r), "tools": True, "task": d["query_type"], "source": "repeat" if r else "repair" if k else "template"}
@@ -527,15 +521,15 @@ def tool_examples(items: list[dict], repair: float = 0.0, seed: int = 0, repeat:
 
 
 def typo_examples(items: list[dict], seed: int = 3, repeat: float = 0.0) -> list[dict]:
-    """v2.10: 무의미 변수명 철자 실수 복구 궤적만 만든다(v2.8 예제는 그대로 두고 따로 더한다). repeat: 같은 오류를 두 번 받은 뒤 고치는 궤적의 비율."""
+    """Build only recovery trajectories for misspelled meaningless variable names (added separately, leaving the other examples unchanged). repeat: fraction of trajectories that receive the same error twice before fixing it."""
     twice = np.random.default_rng(seed).random(len(items)) < repeat
     return [{"id": d["id"], "messages": tool_messages(d, "typo", bool(r)), "tools": True, "task": d["query_type"], "source": "repeat" if r else "repair"}
             for d, r in zip(items, twice)]
 
 
 def error_prefix(d: dict, kind: str, repeat: bool = False) -> str:
-    """GRPO 3차: 오류 복구 rollout의 앞부분. 실수를 넣은 첫 호출과 엔진 오류(repeat면 진단만 하고 같은 인자로 다시 부른 턴과 두 번째 오류까지)를
-    generate_tools 출력 모양으로 만든다. 모델은 그 뒤에서 이어 쓴다."""
+    """Prefix of an error-recovery rollout for GRPO: the first call containing a mistake and the engine error (with repeat, also the diagnose-only turn that re-calls with the same arguments and the second error),
+    in the shape of generate_tools output. The model continues after it."""
     from .tools import format_call
     msgs = tool_messages(d, kind, repeat)[1:5 if repeat else 3]
     return "".join(f"\n<tool_response>\n{m['content']}\n</tool_response>\n" if m["role"] == "tool" else
@@ -543,13 +537,13 @@ def error_prefix(d: dict, kind: str, repeat: bool = False) -> str:
 
 
 def cot_examples(items: list[dict]) -> list[dict]:
-    """도구 없는 CoT 풀이(render 'cot', 도구 목록 없음). 도구 궤적으로 바꾼 유형의 손풀이를 보존한다."""
+    """Tool-free CoT solutions (render 'cot', no tool list). Preserves the hand solutions of types that were converted to tool trajectories."""
     return [{"id": d["id"], "messages": [{"role": "user", "content": render(d, "cot")}, {"role": "assistant", "content": solve(d)}], "tools": False,
              "task": d["query_type"], "source": "cot"} for d in items]
 
 
 def transcript(msgs: list[dict]) -> str:
-    """채점용: 어시스턴트 출력과 도구 결과를 이어 붙인 텍스트(마지막 'Final answer'를 읽는다)."""
+    """For scoring: assistant output and tool results concatenated (the last 'Final answer' is read)."""
     from .tools import format_call
     out = []
     for m in msgs[1:]:

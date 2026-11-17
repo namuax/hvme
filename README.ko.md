@@ -62,27 +62,33 @@ api.engine_counterfactual("marketing", "data.csv", "ad_spend", "sales", "nie", [
 api.ask("광고비를 늘리면 매출이 오르는가?", "marketing", "data.csv")
 ```
 
+예제: [`01_quickstart.py`](examples/01_quickstart.py)(전 과정, GPU 없음) · [`02_graph_from_table.py`](examples/02_graph_from_table.py) · [`03_gym_generate.py`](examples/03_gym_generate.py) · [MCP 설정](examples/04_mcp_server.md) · [vLLM 서빙](examples/05_serve_vllm.md)
+
 MCP 서버(도구 17개)는 `humm-mcp`로 띄운다. LLM은 vLLM으로 서빙하고 `HUMM_LM_URL`로 가리킨다.
 
 ## 결과
 
-직접 잰 값이다. 9B는 Qwen3.5-9B를 엔진으로 검증한 도구 궤적으로 LoRA 학습한 모델이다(tool 모드: 모델이 엔진을 부른다). 기반 모델은 도구 없이 답한다.
+직접 잰 값이고 원 수치는 [`bench/`](bench/)에 있다. 9B는 Qwen3.5-9B를 엔진으로 검증한 도구 궤적으로 LoRA 학습한 모델이다(tool 모드: 모델이 엔진을 부른다). 기반 모델은 도구 없이 답한다.
 
 | 벤치마크 | 기반 Qwen3.5-9B(도구 없음) | humm 9B |
 |---|---|---|
 | CaLM-lite(영어 45과제 × 30) | 51.0 | **91.5** |
 | CauGym(6셋 × 7유형 × 15) | 31.3 | **75.6** |
 | 목표 지표(위 둘의 평균) | 41.1 | **83.6** |
-| CLadder(150, tool 모드) | 86.7 | **90.7** |
+| CLadder 150(기반: CausalCoT 8k, humm: tool 모드) | 86.7 | **90.7** |
 | Corr2Cause(300, F1) | — | **0.923** |
 | KoCLadder(528, 한국어 기계 번역) | — | 0.758(같은 문항 영어 0.907) |
 | KoCorr2Cause(1,157, 한국어 기계 번역) | — | 0.963 |
 
-일반 능력은 유지된다. MATH-500과 KMMLU는 기반 모델과 1pt 안팎 차이다. 단일 패스 판정 모델(Qwen3.5-4B, 보정)은 CLadder 600 0.845, CauGym 예/아니오 2,500 0.752다. Rung 라우터는 CLadder Rung 0.992, KoCLadder Rung 0.983이다.
+일반 능력은 유지된다. MATH-500과 KMMLU는 기반 모델과 1pt 안팎 차이다. 단일 패스 판정 모델(Qwen3.5-4B, 보정)은 CLadder 600 0.843, CauGym 예/아니오 2,500 0.751이다. Rung 라우터는 CLadder Rung 0.992, KoCLadder Rung 0.983이다.
 
 주의할 점이 있다. 한국어 셋은 자동 검사(숫자, 역번역 극성, 비교 순서)를 통과한 기계 번역이고 아직 사람이 검수하지 않았다. 한 번씩 학습한 모델끼리는 CLadder 150에서 8문항, KMMLU에서 2pt까지 차이가 나니 그보다 작은 차이는 잡음이다.
 
 ## 구성
+
+![humm이 인과 질문에 답하는 과정](assets/architecture.svg)
+
+자세한 설명(영어): [아키텍처](docs/architecture.md) · [HCG 형식](docs/hcg.md) · [엔진](docs/engine.md) · [LM 도구](docs/tools.md) · [학습](docs/training.md) · [평가](docs/evaluation.md)
 
 | 패키지 | 역할 |
 |---|---|

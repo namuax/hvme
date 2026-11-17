@@ -15,7 +15,7 @@ def corpus():
 
 def test_corpus_is_plausible_and_annotated(corpus):
     order = [v[0] for v in TEXT_VOCAB["marketing"]]
-    assert all(order.index(a) < order.index(b) for a, b in corpus.graph.edges)  # 정답 엣지는 그럴듯한 순서를 따른다
+    assert all(order.index(a) < order.index(b) for a, b in corpus.graph.edges)  # true edges follow a plausible order
     kinds = {n["relation"] for n in corpus.annotations.values()}
     assert kinds == {"causal", "correlational", "no_effect"}
     assert any(n.get("wrong") for n in corpus.annotations.values()) and any(d["noisy"] for d in corpus.docs)
@@ -36,8 +36,8 @@ def test_aggregate_rules():
     c = pd.DataFrame(rows, columns=["doc_id", "cause_c", "effect_c", "relation", "polarity", "hedged"]).assign(quote="q")
     e = aggregate(c, min_score=0.0)
     r = e.set_index(["src", "dst"]).loc[("A", "B")]
-    assert r.support == 1.5 and r.contra == 2 and r.score == pytest.approx(1.5 / 4.5)  # 같은 문서 중복은 한 번, 불확실은 0.5
-    assert ("C", "D") not in set(zip(e.src, e.dst))  # 상관 주장만으로는 엣지를 만들지 않는다
+    assert r.support == 1.5 and r.contra == 2 and r.score == pytest.approx(1.5 / 4.5)  # duplicates within one document count once, hedged claims count 0.5
+    assert ("C", "D") not in set(zip(e.src, e.dst))  # a correlation claim alone does not create an edge
 
 
 def test_canonicalize_with_oracle(corpus):
@@ -52,10 +52,10 @@ def test_canonicalize_with_oracle(corpus):
 def test_pipeline_perfect_oracle_recovers_graph(corpus):
     r = text_to_hcg(corpus.docs, "m", "marketing", TextOracle(corpus, 0.0))
     m = evaluate(list(zip(r.edges.src, r.edges.dst)), r.mapping, corpus)
-    assert m["precision"] == 1.0 and m["recall"] >= 0.85 and m["group_purity"] == 1.0  # 오류 문서가 반대 주장을 한 참 엣지 하나는 점수 하한에 걸릴 수 있다
+    assert m["precision"] == 1.0 and m["recall"] >= 0.85 and m["group_purity"] == 1.0  # one true edge contradicted by an erroneous document may hit the score floor
     loose = text_to_hcg(corpus.docs, "m", "marketing", TextOracle(corpus, 0.0), verify=False, min_score=0.4)
-    assert evaluate(list(zip(loose.edges.src, loose.edges.dst)), loose.mapping, corpus)["precision"] < 1.0  # 문서 하나짜리 오류 주장이 남는다
-    assert {"llm:counterfactual"} <= {x.method for e in r.hcg.edges for x in e.evidence}  # 검증은 거르지 않고 증거로 붙는다
+    assert evaluate(list(zip(loose.edges.src, loose.edges.dst)), loose.mapping, corpus)["precision"] < 1.0  # a single-document erroneous claim survives
+    assert {"llm:counterfactual"} <= {x.method for e in r.hcg.edges for x in e.evidence}  # verification does not filter; it is attached as evidence
 
 
 def test_clean_strips_change_words():
@@ -74,7 +74,7 @@ def test_merge_resolves_direction_by_direction_evidence():
     text.add_edge("X var", "Y var", evidence=[Evidence(kind=EvidenceKind.TEXT, score=0.6), Evidence(kind=EvidenceKind.LLM_PRIOR, score=0.8)])
     m = merge_hcg(text, table, {"X var": "x", "Y var": "y"})
     assert m.edge("y", "x").status == EdgeStatus.REFUTED and m.edge("x", "y").status == EdgeStatus.SUPPORTED
-    assert {x.method for x in m.edge("x", "y").evidence} >= {"ci:g_test"}  # 인접성 증거는 살아남은 엣지로 옮긴다
+    assert {x.method for x in m.edge("x", "y").evidence} >= {"ci:g_test"}  # adjacency evidence is carried over to the surviving edge
 
 
 def test_link_nodes_by_alias(corpus):

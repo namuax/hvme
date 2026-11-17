@@ -1,9 +1,9 @@
-"""경로 기반 Humm API. MCP 도구·노트북·스크립트가 같은 함수를 쓴다.
+"""Path-based Humm API. MCP tools, notebooks and scripts use the same functions.
 
-- 그래프는 data/graphs/<graph_id>.hcg.json 에 저장하고 graph_id로 주고받는다.
-- 데이터는 CSV 경로, 문서는 JSONL({"id", "text"}) 경로나 .txt/.md 파일이 든 폴더로 받는다.
-- 반환값은 모두 JSON으로 바꿀 수 있는 dict이다.
-- llm: providers.from_spec 형식("hf:Qwen/Qwen3.5-9B@cuda:1", "anthropic:claude-sonnet-5-5", "replay:<경로>"). 기본값은 환경 변수 HUMM_LLM.
+- Graphs are stored in data/graphs/<graph_id>.hcg.json and passed around by graph_id.
+- Data is given as a CSV path; documents as a JSONL ({"id", "text"}) path or a folder of .txt/.md files.
+- All return values are JSON-serializable dicts.
+- llm: providers.from_spec format ("hf:Qwen/Qwen3.5-9B@cuda:1", "anthropic:claude-sonnet-5-5", "replay:<path>"). Defaults to the HUMM_LLM environment variable.
 """
 import json
 import os
@@ -38,7 +38,7 @@ def _llm(spec: str | None):
 
 
 def _done(llm) -> None:
-    """기록용 공급자면 응답을 저장한다."""
+    """If the provider is a recording one, save its responses."""
     getattr(llm, "save", lambda: None)()
 
 
@@ -56,9 +56,9 @@ def graph_summary(hcg: HCG) -> dict:
                        "evidence": sorted({x.kind.value for x in e.evidence})} for e in hcg.edges]}
 
 
-# ---------- 그래프 ----------
+# ---------- graphs ----------
 def graph_from_table(csv: str, graph_id: str, domain: str = "", alpha: float = 0.01, mode: str = "hybrid", llm: str | None = None) -> dict:
-    """정형 데이터 → HCG (PC + 선택적 LLM 쌍별 사전지식 + L1·L2 검증)."""
+    """Tabular data -> HCG (PC + optional LLM pairwise prior + L1/L2 validation)."""
     provider = _llm(llm)
     r = tabular_to_hcg(pd.read_csv(csv), graph_id, domain, provider=provider, alpha=alpha, mode=mode, n_boot=10, validate_kw={"n_perm": 50})
     _done(provider)
@@ -67,7 +67,7 @@ def graph_from_table(csv: str, graph_id: str, domain: str = "", alpha: float = 0
 
 
 def graph_from_text(docs: str, graph_id: str, domain: str = "", llm: str | None = None) -> dict:
-    """문서 → HCG (인과 주장 추출 → 정규화 → 문서 간 집계 → 반사실 검증 증거). LLM이 필요하다."""
+    """Documents -> HCG (causal claim extraction -> canonicalization -> cross-document aggregation -> counterfactual verification evidence). Requires an LLM."""
     provider = _llm(llm)
     r = text_to_hcg(read_docs(docs), graph_id, domain, provider)
     _done(provider)
@@ -76,7 +76,7 @@ def graph_from_text(docs: str, graph_id: str, domain: str = "", llm: str | None 
 
 
 def graph_merge(text_graph: str, table_graph: str, graph_id: str, column_aliases: dict | None = None) -> dict:
-    """텍스트 HCG를 정형 HCG에 병합한다. 노드는 이름·별칭 유사도로 잇고, 반대 방향 엣지는 방향 증거로 정리한다."""
+    """Merge a text HCG into a tabular HCG. Nodes are linked by name/alias similarity; opposing edges are reconciled using direction evidence."""
     text, table = _load(text_graph), _load(table_graph)
     link = link_nodes(text, table, column_aliases)
     merged = merge_hcg(text, table, link, graph_id)
@@ -92,9 +92,9 @@ def graph_list() -> list[str]:
     return sorted(p.name.removesuffix(".hcg.json") for p in GRAPHS.glob("*.hcg.json"))
 
 
-# ---------- 검증 ----------
+# ---------- validation ----------
 def validate_run(graph_id: str, csv: str, n_perm: int = 100) -> dict:
-    """L1 구조 + L2 데이터 반증. 엣지 상태(supported/verified/refuted)를 갱신해 저장한다."""
+    """L1 structure + L2 data falsification. Updates edge status (supported/verified/refuted) and saves."""
     hcg = _load(graph_id)
     report, changes = validate_hcg(hcg, pd.read_csv(csv), n_perm=n_perm)
     hcg.save(_path(graph_id))
@@ -103,9 +103,9 @@ def validate_run(graph_id: str, csv: str, n_perm: int = 100) -> dict:
             "changes": changes.to_dict("records")}
 
 
-# ---------- 인과 엔진 ----------
+# ---------- causal engine ----------
 def engine_identify(graph_id: str, treatment: str, outcome: str, csv: str | None = None) -> dict:
-    """식별(백도어 → 프론트도어 → IV). csv를 주면 데이터에 없는 노드를 관측되지 않은 변수로 본다."""
+    """Identification (backdoor -> frontdoor -> IV). If csv is given, nodes missing from the data are treated as unobserved."""
     g = _load(graph_id).to_networkx()
     lat = latent_of(g, pd.read_csv(csv, nrows=1)) if csv else []
     e = identify(g, treatment, outcome, lat)
@@ -125,17 +125,17 @@ def engine_refute(graph_id: str, csv: str, treatment: str, outcome: str) -> list
 
 
 def engine_counterfactual(graph_id: str, csv: str, treatment: str, outcome: str, query: str = "ett", mediators: list | None = None) -> dict:
-    """데이터로 적합한 이진 SCM에서 반사실 질의를 계산한다. query: ate, ett, nde, nie, pn, ps."""
+    """Compute a counterfactual query on a binary SCM fitted from the data. query: ate, ett, nde, nie, pn, ps."""
     g, df = _load(graph_id).to_networkx(), pd.read_csv(csv)
     scm: BinarySCM = fit_scm(g, df, [treatment, outcome, *(mediators or [])])
     args = (treatment, outcome, mediators or []) if query in ("nde", "nie") else (treatment, outcome)
     return {"query": query, "value": getattr(scm, query)(*args), "exact": scm.exact, "nodes": sorted(scm.graph.nodes)}
 
 
-# ---------- 오케스트레이터 ----------
+# ---------- orchestrator ----------
 def ask(question: str, graph_id: str, csv: str, experiment_csv: str | None = None, experiment_treatment: str | None = None,
         llm: str | None = None, n_perm: int = 100) -> dict:
-    """질문 하나를 끝까지 처리한다: 질의 분석 → 검증 → 식별 → 추정 → 반박 → 민감도 → 근거·가정을 갖춘 답."""
+    """Handle one question end to end: query analysis -> validation -> identification -> estimation -> refutation -> sensitivity -> an answer with evidence and assumptions."""
     provider = _llm(llm)
     exps = {experiment_treatment: pd.read_csv(experiment_csv)} if experiment_csv else {}
     orch = Orchestrator(_load(graph_id), pd.read_csv(csv), provider, experiments=exps, n_perm=n_perm)
@@ -144,15 +144,15 @@ def ask(question: str, graph_id: str, csv: str, experiment_csv: str | None = Non
     return out
 
 
-# ---------- v1: Humm-Fast·Humm-LM (Step 11) ----------
-# 모델 경로·장치는 환경 변수로 바꾼다. 처음 부를 때 한 번 올리고 프로세스 안에서 다시 쓴다.
+# ---------- v1: Humm-Fast and Humm-LM ----------
+# Model paths and devices are set through environment variables. Loaded once on first use and reused within the process.
 FAST_PATH = os.environ.get("HUMM_FAST", str(ROOT / "models" / "humm-fast-4b-v2-story-distill"))
 LM_PATH = os.environ.get("HUMM_LM", str(ROOT / "models" / "humm-lm-9b-sft-v217b"))
-THRESHOLD = float(os.environ.get("HUMM_FAST_THRESHOLD", "0.8"))  # Fast 확신도(최대 보기 확률)가 이보다 낮으면 escalate
-# Rung 분류는 Rung 문항으로 이어 학습한 라우터가 맡는다(CLadder Rung 0.515 → 0.967). 예/아니오 판정은 Corr2Cause가 떨어져 FAST_PATH로 둔다.
+THRESHOLD = float(os.environ.get("HUMM_FAST_THRESHOLD", "0.8"))  # escalate if Fast confidence (max option probability) is below this
+# Rung classification is handled by a router further trained on Rung items (CLadder Rung 0.515 -> 0.967). Yes/no judgment stays on FAST_PATH because Corr2Cause regresses with the router.
 _ROUTER = ROOT / "models" / "humm-fast-4b-v2-router-ko"
 ROUTER_PATH = os.environ.get("HUMM_ROUTER", str(_ROUTER) if _ROUTER.exists() else FAST_PATH)
-ROUTER_THRESHOLD = float(os.environ.get("HUMM_ROUTER_THRESHOLD", "0.9"))  # 라우터 확신도가 이보다 낮으면 Humm-LM이 Rung을 고른다
+ROUTER_THRESHOLD = float(os.environ.get("HUMM_ROUTER_THRESHOLD", "0.9"))  # if router confidence is below this, Humm-LM picks the Rung
 _MODELS: dict = {}
 
 
@@ -173,7 +173,7 @@ def _router():
 
 
 def _lm():
-    """HUMM_LM_URL(OpenAI 호환 서버, 예: vLLM http://127.0.0.1:8011/v1)이 있으면 원격으로, 없으면 HF로 올린다."""
+    """Load remotely if HUMM_LM_URL (an OpenAI-compatible server, e.g. vLLM at http://127.0.0.1:8011/v1) is set, otherwise load with HF."""
     if "lm" not in _MODELS:
         if os.environ.get("HUMM_LM_URL"):
             from .providers.remote import RemoteProvider
@@ -191,7 +191,7 @@ def _fast_ask(context: str, question: str, kind: str, options: list[str]) -> lis
 
 
 def fast_noul(proposition: str, context: str = "") -> dict:
-    """참/거짓 판단 한 번. p_yes가 threshold와 1 − threshold 사이면(확신이 낮으면) escalate."""
+    """A single true/false judgment. Escalate if p_yes is between 1 - threshold and threshold (low confidence)."""
     p = _fast_ask(context, proposition, "noul", [])
     return {"p_yes": p[0], "confidence": max(p), "escalate": max(p) < THRESHOLD}
 
@@ -208,7 +208,7 @@ def fast_score(question: str, levels: int = 5, context: str = "") -> dict:
 
 
 def classify_question(question: str, graph_id: str = "") -> dict:
-    """Rung 분류(Fast, 저신뢰면 Humm-LM). graph_id를 주면 질문에 나온 그래프 변수로 처치·결과·매개도 정한다."""
+    """Rung classification (Fast; Humm-LM if low confidence). If graph_id is given, treatment, outcome and mediators are also decided from graph variables in the question."""
     from .orchestrator.query import KEYWORDS, parse_rules
     from .orchestrator.route import QueryRouter
     r = QueryRouter(_router(), _lm(), ROUTER_THRESHOLD).classify([question])[0]
@@ -221,7 +221,7 @@ def classify_question(question: str, graph_id: str = "") -> dict:
 
 
 def lm_verify(graph_id: str, csv: str, treatment: str, outcome: str) -> dict:
-    """Humm-LM(tool 모드)이 그래프 + 데이터로 적합한 확률표를 읽고 '처치가 결과를 올리는가'를 따로 풀어 엔진 ATE 부호와 비교한다."""
+    """Humm-LM (tool mode) reads the probability table fitted from the graph + data, solves 'does the treatment raise the outcome?' independently, and compares with the engine ATE sign."""
     from .orchestrator.route import lm_verify as verify
     hcg, df = _load(graph_id), pd.read_csv(csv)
     g = hcg.to_networkx()
@@ -232,7 +232,7 @@ def lm_verify(graph_id: str, csv: str, treatment: str, outcome: str) -> dict:
 
 def ask_v1(question: str, graph_id: str, csv: str, experiment_csv: str | None = None, experiment_treatment: str | None = None,
            llm: str | None = None, n_perm: int = 100, verify: bool = True) -> dict:
-    """ask와 같고, 질의 분석에 Fast Rung 분류(저신뢰면 Humm-LM)를, 검증에 Humm-LM 독립 풀이를 더한다."""
+    """Same as ask, plus Fast Rung classification (Humm-LM if low confidence) for query analysis and an independent Humm-LM solution for verification."""
     from .orchestrator.route import QueryRouter
     provider = _llm(llm) if (llm or os.environ.get("HUMM_LLM")) else None
     exps = {experiment_treatment: pd.read_csv(experiment_csv)} if experiment_csv else {}

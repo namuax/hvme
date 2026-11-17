@@ -1,9 +1,9 @@
-"""추정치 반박 테스트 (DoWhy refuter와 같은 발상, Humm 추정기 위에서 동작).
+"""Estimate refutation tests (same idea as DoWhy refuters, running on the Humm estimator).
 
-- placebo: 처치를 무작위로 섞으면 효과가 0이 되어야 한다
-- random_common_cause: 독립 난수 변수를 공통 원인으로 추가해도 효과가 그대로여야 한다
-- data_subset: 80% 부분표본에서도 효과가 그대로여야 한다
-판정 기준: |새 값 - 기대값| < 2 × 부트스트랩 표준오차
+- placebo: shuffling the treatment at random should drive the effect to 0
+- random_common_cause: adding an independent random variable as a common cause should leave the effect unchanged
+- data_subset: the effect should hold on an 80% subsample
+Decision rule: |new value - expected value| < 2 × bootstrap standard error
 """
 import networkx as nx
 import numpy as np

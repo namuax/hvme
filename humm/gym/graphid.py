@@ -1,16 +1,16 @@
-"""Humm-Gym v3.9 (SFT v2.14): 그래프만 주는 식별 질의 셋. 앞문 기준 집합(frontdoor)·도구변수(instrument)·관측 안 된 교란이 있는 식별(cei).
+"""Humm-Gym: identification queries that give only a graph: front-door criterion set (frontdoor), instrumental variable (instrument), and identification with unobserved confounding (cei).
 
-9B v2.12 CaLM에서 FAS 7·IV 40·CEI 7–40이었다(reports/2026-11-08_humm_lm_9b_sft_v212.md). 모델이 adjustment·identify를 잘못 불렀고,
-엔진에는 앞문 기준·도구변수 집합 판정과 교란 쌍을 받는 인자가 없었다. 엔진에 frontdoor·instrument 질의와 confounded 인자(ID 알고리즘)를 더하고,
-이 문항으로 호출 궤적을 만든다.
+Earlier CaLM results were FAS 7, IV 40, CEI 7-40. The model misused adjustment and identify, and
+the engine had no front-door/instrument set check and no argument for confounded pairs. frontdoor and instrument queries and a confounded argument (ID algorithm) are added to the engine, and
+these items produce call trajectories.
 
-- frontdoor·instrument: 보기 셋 중 하나만 맞는 객관식(kind "choice"). 오답 보기의 절반 이상은 헷갈리는 집합이다.
-  앞문: 일부 경로만 가로막는 매개, 뒷문이 열린 매개, 처치의 부모, 결과의 자식. 도구변수: 결과와 다른 길로 이어진 처치의 부모, 처치의 자손, 부모가 아닌 조상, 처치 자신.
-- 도구변수는 처치의 부모이면서 처치를 지우면 결과와 d-분리되는 변수다(DoWhy 정의, CaLM IV 정답과 같다).
-- cei: 교란 쌍을 방향 엣지 수의 0.2–0.8배 넣고 P(b | do(a))가 식별되는지 묻는다(예/아니오 반반).
-- colbias: CLadder식 충돌 편향. a → c ← b에서 c인 사람만 본 a·b 상관을 주고 'a가 b에 영향을 주는가/주지 않는가'를 묻는다(CaLM CB 63, 모델이 dsep을 불렀다).
-  답은 path 질의(a가 b의 조상인가)로 정한다. 문형만으로 답이 정해지지 않게 30%는 a → b 엣지를 더한다.
-문형은 유형마다 둘이고 하나는 CaLM 문형을 본떴다(벤치 문항은 쓰지 않았다).
+- frontdoor, instrument: multiple choice with exactly one correct option out of three (kind "choice"). At least half of the wrong options are confusable sets.
+  Front-door: a mediator blocking only some paths, a mediator with an open back door, a parent of the treatment, a child of the outcome. Instrument: a treatment parent linked to the outcome by another path, a treatment descendant, a non-parent ancestor, the treatment itself.
+- An instrument is a parent of the treatment that is d-separated from the outcome once the treatment is removed (DoWhy definition, same as the CaLM IV answer).
+- cei: add confounded pairs numbering 0.2-0.8 times the directed edge count and ask whether P(b | do(a)) is identifiable (half yes, half no).
+- colbias: CLadder-style collider bias. For a -> c <- b, give the a-b correlation among those with c and ask whether a affects b (the model had called dsep here).
+  The answer comes from a path query (is a an ancestor of b). To keep the template from giving the answer away, 30% add an a -> b edge.
+Each type has two templates, one modeled on the CaLM template (no benchmark items are used).
 """
 from itertools import combinations
 
@@ -37,7 +37,7 @@ QUESTIONS = {
 
 
 def gen_colbias(rng, domain):
-    """a → c ← b(30%는 a → b도). 질문은 c인 사람만 본 상관에서 a가 b에 영향을 주는지 묻는다."""
+    """a -> c <- b (30% also a -> b). The question asks whether a affects b given the correlation among those with c."""
     g = nx.DiGraph([("a", "c"), ("b", "c")] + ([("a", "b")] if rng.random() < 0.3 else []))
     lex = bare_lex(g, rng) if rng.random() < 0.5 else _lex(g, rng, "en", domain)
     nm, bare = lex.name, isinstance(lex, Bare)
@@ -57,7 +57,7 @@ def gen_colbias(rng, domain):
 
 
 def _options(g, ask, rng):
-    """(처치, 결과, 맞는 집합, 헷갈리는 오답 집합들, 나머지 오답 집합들) 또는 None."""
+    """(treatment, outcome, correct set, confusable wrong sets, remaining wrong sets) or None."""
     nodes = sorted(g.nodes)
     pairs = [(x, y) for x in nodes for y in nodes if x != y and nx.has_path(g, x, y)]
     rng.shuffle(pairs)
@@ -72,7 +72,7 @@ def _options(g, ask, rng):
             good = [{z} for z in sorted(g.predecessors(x)) if is_instrument(g, x, y, z)]
             good += [set(c) for c in combinations([next(iter(z)) for z in good], 2)] if len(good) > 1 and rng.random() < 0.3 else []
             hard = [{z} for z in g.predecessors(x) if not is_instrument(g, x, y, z)] + [{z} for z in sorted(nx.descendants(g, x) - {y})] + \
-                   [{z} for z in sorted(nx.ancestors(g, x) - set(g.predecessors(x)))] + [{x}]  # 집합 순회는 해시 순서라 정렬한다(프로세스 간 재현)
+                   [{z} for z in sorted(nx.ancestors(g, x) - set(g.predecessors(x)))] + [{x}]  # set iteration follows hash order, so sort for reproducibility across processes
             ok = lambda m: all(z in g.predecessors(x) and is_instrument(g, x, y, z) for z in m)
         rest = [{z} for z in nodes if z not in (x, y) and not ok({z})]
         if good and len({frozenset(m) for m in hard + rest}) >= 2:
@@ -112,7 +112,7 @@ def gen_graphid(ask, rng, lang, domain):
             seen.add(frozenset(m))
         label = int(rng.integers(3))
         sets = wrong[:label] + [good] + wrong[label:]
-    surface = str(rng.choice(["letters", "bare", "named"] if n <= 12 else ["letters", "bare"]))  # 영역 어휘는 12개까지만 넉넉하다
+    surface = str(rng.choice(["letters", "bare", "named"] if n <= 12 else ["letters", "bare"]))  # domain vocabulary is only sufficient for up to 12 variables
     if surface == "letters":
         lex = Lexicon({v: (L, "예", "아니오", L, "yes", "no") for v, L in zip(sorted(g.nodes, key=lambda _: rng.random()), LETTERS + "OPQ")}, "en")
     else:

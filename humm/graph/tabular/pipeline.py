@@ -1,6 +1,6 @@
-"""정형 데이터 → HCG 파이프라인 (02_proposal.md 4.3, S1~S5).
+"""Tabular data -> HCG pipeline (S1-S5).
 
-S1 프로파일 → S2 LLM 인과 순서 → S3 PC(배경지식) → S4 남은 미정 엣지를 LLM 쌍별 질의로 결정 → S5 부트스트랩 빈도 → HCG → Step 4 검증
+S1 profile -> S2 LLM causal order -> S3 PC (background knowledge) -> S4 resolve remaining undirected edges with LLM pairwise queries -> S5 bootstrap frequencies -> HCG -> validation
 """
 from dataclasses import dataclass
 
@@ -25,11 +25,11 @@ class TabularResult:
     report: ValidationReport
     changes: pd.DataFrame
     prior_raw: str
-    conflicts: list  # 데이터가 정한 방향과 LLM 순서가 어긋나는 엣지 (L3 검토 대상)
+    conflicts: list  # edges where the data-derived direction conflicts with the LLM order (for L3 review)
 
 
 def orient_with_pairwise(g: CPDAG, pw: pd.DataFrame, threshold: float = 0.6) -> None:
-    """LLM이 threshold 이상 확신하는 쌍만 방향을 정하고, 그 결과로 Meek 규칙을 다시 돌린다."""
+    """Orient only pairs the LLM is at least threshold confident about, then rerun the Meek rules."""
     for r in pw.itertuples():
         if r.p_ab >= threshold:
             g.orient(r.a, r.b, "llm")
@@ -41,13 +41,13 @@ def orient_with_pairwise(g: CPDAG, pw: pd.DataFrame, threshold: float = 0.6) -> 
 def tabular_to_hcg(df: pd.DataFrame, graph_id: str, domain: str = "", descriptions: dict | None = None, provider=None,
                    alpha: float = 0.01, mode: str = "hybrid", prior: str = "pairwise", n_boot: int = 20, time: dict | None = None,
                    max_cond: int = 3, validate_kw: dict | None = None, tau: float | None = None) -> TabularResult:
-    """provider: 공급자 하나 또는 여러 개의 리스트(쌍별 확률을 평균한다).
-    prior: 'order'    LLM에게 전체 인과 순서를 묻고, 그래도 남는 미정 엣지만 쌍별로 묻는다(첫 공급자만 쓴다).
-           'pairwise' PC 골격의 모든 인접 쌍에 대해 방향을 묻고, 확신한 답을 금지 방향 배경지식으로 쓴다(기본값).
-           'both'     둘 다 쓴다.
-    mode:  'soft' 데이터 우선, 'hard' 사전지식 우선,
-           'hybrid' 모든 공급자가 같은 방향을 tau 이상 확신한 쌍만 데이터보다 우선하고 나머지는 soft로 쓴다(기본값).
-    tau:   지정하지 않으면 공급자 하나일 때 0.99, 여럿일 때 0.95 (reports/2026-10-25_tabular_llm_prior.md 6장).
+    """provider: one provider or a list of providers (pairwise probabilities are averaged).
+    prior: 'order'    ask the LLM for the full causal order, then ask pairwise only for edges still undecided (first provider only).
+           'pairwise' ask for the direction of every adjacent pair in the PC skeleton and use confident answers as forbidden-direction knowledge (default).
+           'both'     use both.
+    mode:  'soft' data first, 'hard' prior knowledge first,
+           'hybrid' only pairs that all providers are at least tau confident about in the same direction override the data; the rest use soft (default).
+    tau:   if unset, 0.99 for one provider and 0.95 for several.
     """
     prof = profile(df)
     empty = pd.DataFrame(columns=["a", "b", "p_ab"])
@@ -89,7 +89,7 @@ def tabular_to_hcg(df: pd.DataFrame, graph_id: str, domain: str = "", descriptio
 
 def compare(df: pd.DataFrame, true: nx.DiGraph, providers: dict, domain: str = "", descriptions: dict | None = None,
             alpha: float = 0.01, modes=("soft", "hard", "hybrid"), priors=("pairwise",), taus=()) -> pd.DataFrame:
-    """같은 데이터에서 '통계만'과 공급자별·전략별 사전지식 결합을 비교한다. providers: {이름: 공급자 또는 None}."""
+    """Compare 'statistics only' with per-provider, per-strategy prior combinations on the same data. providers: {name: provider or None}."""
     from ...bench.metrics import graph_report
     from .prior import order_agreement, pairwise_agreement
 

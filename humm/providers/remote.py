@@ -1,7 +1,7 @@
-"""OpenAI 호환 서버(vLLM 등)로 Humm-LM을 부르는 공급자 (Step 12 온프레미스 서빙).
+"""Provider that calls Humm-LM through an OpenAI-compatible server (vLLM etc.) for on-premises serving.
 
-채팅 템플릿은 로컬 토크나이저로 입히고 /v1/completions에 원문 그대로 보낸다. 그래서 humm.lm.sample.generate_tools의 도구 루프
-(</tool_call>에서 멈추고 causal_engine 결과를 붙여 이어 쓰기)가 HF 모델과 같은 문자열로 돈다.
+The chat template is applied with the local tokenizer and the raw text is sent to /v1/completions. This way the tool loop of humm.lm.sample.generate_tools
+(stop at </tool_call>, append the causal_engine result, continue) runs on the same strings as with an HF model.
 
     vllm serve models/humm-lm-9b-sft-v214 --served-model-name humm-lm-9b --port 8011
     lm = RemoteProvider("http://127.0.0.1:8011/v1", "humm-lm-9b", tokenizer="models/humm-lm-9b-sft-v214")
@@ -30,7 +30,7 @@ class RemoteProvider:
 
     def generate_raw(self, texts: list[str], max_new_tokens: int, stop: list[str], do_sample: bool = False, temperature: float = 0.7,
                      top_p: float = 0.95) -> list[str]:
-        """채팅 템플릿을 입힌 문자열 → 이어 쓴 문자열. 서버가 묶어 처리하도록 동시에 보낸다."""
+        """Chat-templated strings -> continuations. Requests are sent concurrently so the server can batch them."""
         sampling = {"temperature": temperature, "top_p": top_p} if do_sample else {"temperature": 0.0}
         with ThreadPoolExecutor(self.batch_size) as ex:
             return list(ex.map(lambda t: self._post(t, max_new_tokens, stop, sampling), texts))

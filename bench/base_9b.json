@@ -1,0 +1,80 @@
+{
+ "model": "Qwen3.5-9B base (no tools)",
+ "calm_lite": {
+  "n": 1350,
+  "accuracy": 0.5096,
+  "by_task": {
+   "AC-B_causal_judgement_EN": 0.6667,
+   "AR-B_CaLM-AR_EN": 0.8333,
+   "ATE-B_ATE-natural_EN": 1.0,
+   "ATE-P_ATE-basic_EN": 0.7333,
+   "ATE-P_ATE-hard_EN": 0.7667,
+   "BAS-B_backadj_EN": 0.4333,
+   "BAS-C_max-BAS_EN": 0.1333,
+   "BAS-C_min-BAS_EN": 0.0,
+   "BAS-C_mix-BAS_EN": 0.0,
+   "CA-B_FA_EN": 0.8,
+   "CA-B_FP_EN": 0.8667,
+   "CB-B_collider-bias_EN": 0.4333,
+   "CDE-B_CDE-natural_EN": 0.9,
+   "CDE-P_CDE-basic_EN": 0.5667,
+   "CDE-P_CDE-hard_EN": 0.5,
+   "CEI-B_0.2-UC_EN": 0.2,
+   "CEI-B_0.4-UC_EN": 0.4,
+   "CEI-B_0.6-UC_EN": 0.3,
+   "CEI-B_0.8-UC_EN": 0.3333,
+   "CORR-B_correlation_EN": 0.6,
+   "CR-B_det-counterfactual_EN": 0.5,
+   "CR-C_CRASS_EN": 0.7667,
+   "EAE-B_exp-away_EN": 0.3333,
+   "ECI-B_CTB_EN": 0.8667,
+   "ECI-B_ESC_EN": 0.7667,
+   "ECI-B_MAVEN-ERE_EN": 0.7667,
+   "ETT-B_ETT-natural_EN": 0.9333,
+   "ETT-P_ETT-basic_EN": 0.4667,
+   "ETT-P_ETT-hard_EN": 0.3,
+   "FAS-C_FAS_EN": 0.0,
+   "IV-C_CaLM-IV_EN": 0.0,
+   "NDE-B_NDE-natural_EN": 0.8333,
+   "NDE-P_NDE-basic_EN": 0.5333,
+   "NDE-P_NDE-hard_EN": 0.6667,
+   "NIE-B_NIE-natural_EN": 0.6,
+   "NIE-P_NIE-basic_EN": 0.3333,
+   "NIE-P_NIE-hard_EN": 0.4,
+   "PCD-B_COPA_EN": 0.7,
+   "PCD-B_E-CARE_EN": 0.7,
+   "PCD-C_COPA_EN": 0.9667,
+   "PCD-C_E-CARE_EN": 0.8667,
+   "PN-P_PN-basic_EN": 0.0667,
+   "PN-P_PN-hard_EN": 0.0,
+   "PS-P_PS-basic_EN": 0.0333,
+   "PS-P_PS-hard_EN": 0.0667
+  }
+ },
+ "caugym": {
+  "n": 630,
+  "accuracy": 0.3127,
+  "by_set": {
+   "base": 0.4857,
+   "deconfounding": 0.2762,
+   "insufficient": 0.0,
+   "omitted": 0.3143,
+   "redundant": 0.3333,
+   "rephrased": 0.4667
+  },
+  "by_type": {
+   "ATE": 0.6222,
+   "CDE": 0.5444,
+   "ETT": 0.3667,
+   "NDE": 0.3,
+   "NIE": 0.3,
+   "PN": 0.0111,
+   "PS": 0.0444
+  }
+ },
+ "cladder_150_causalcot": {
+  "n": 150,
+  "accuracy": 0.8667,
+  "max_new_tokens": 8192
+ }
+}

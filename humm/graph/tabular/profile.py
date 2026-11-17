@@ -1,4 +1,4 @@
-"""S1 변수 프로파일링: 열마다 유형·범주·결측을 요약하고, LLM에 줄 변수 설명 텍스트를 만든다."""
+"""S1 variable profiling: summarize type, categories and missing values per column, and build the variable description text given to the LLM."""
 import pandas as pd
 
 
@@ -13,6 +13,6 @@ def profile(df: pd.DataFrame, max_levels: int = 8) -> pd.DataFrame:
 
 
 def describe_variables(prof: pd.DataFrame, descriptions: dict | None = None) -> str:
-    """'- name (kind): 설명' 형식의 줄 목록. 설명이 없으면 이름만 쓴다."""
+    """List of lines in the form '- name (kind): description'. Without a description, only the name is written."""
     descriptions = descriptions or {}
     return "\n".join(f"- {r.variable} ({r.kind}){': ' + descriptions[r.variable] if r.variable in descriptions else ''}" for r in prof.itertuples())

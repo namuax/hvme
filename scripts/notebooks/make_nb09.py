@@ -2,26 +2,26 @@ import sys
 import nbformat as nbf
 
 cells = [
-"""md:# 09. Humm-Fast — 단일 패스 인과 판단 모델 (Noul · Choice · Score)
+"""md:# 09. Humm-Fast — a single-pass causal judgment model (Noul · Choice · Score)
 
-추론 문장을 만들지 않고 한 번의 순전파로 답 토큰(예/아니오, 보기 알파벳, 단계 번호) 위의 확률을 내는 모델이다(`04_humm_fast.md`). 이 노트북은 Step 8을 다룬다.
+Humm-Fast produces probabilities over answer tokens (yes/no, option letters, step numbers) in a single forward pass, without generating any reasoning text.
 
-| 장 | 내용 | GPU |
+| Section | What it does | GPU |
 |---|---|---|
-| 1 | 학습·보정·평가 문항 구성(Humm-Gym + bnlearn 엣지 방향·반사실 검증) | — |
-| 2 | 기반 모델 zero-shot 기준선과 온도 보정만의 효과 | GPU0·GPU1 |
-| 3 | Qwen3.5-4B 전체 미세조정(정답 라벨, 교차 엔트로피 = 적정 점수 규칙) → 온도 보정 | GPU0 |
-| 4 | 평가: 정확도·ECE·Brier·AUROC, 신뢰도 구간표 | — |
-| 5 | 지연 시간 | GPU0·GPU1 |
-| 6 | 라우팅: 확신 낮은 문항만 느린 경로(9B CoT)로 올릴 때 상향 비율 대비 정확도 | — |
-| 7 | 그래프 구축 연결: 쌍별 방향 판정(Step 5)·L3 반사실 검증(Step 6)을 Fast로 바꾸고 9B 호출 수를 비교 | GPU0·GPU1 |
+| 1 | Build the training, calibration and evaluation items (Humm-Gym + bnlearn edge direction and counterfactual verification) | none |
+| 2 | Zero-shot baselines of the base models, and the effect of temperature calibration alone | yes |
+| 3 | Fine-tune Qwen3.5-4B (gold labels, cross-entropy = a proper scoring rule) → temperature calibration | yes |
+| 4 | Evaluation: accuracy, ECE, Brier, AUROC, and a confidence-bin table | none |
+| 5 | Latency | yes |
+| 6 | Routing: accuracy versus escalation rate when only low-confidence items go to the slow path (9B CoT) | none |
+| 7 | Graph-construction integration: replace pairwise direction judgments (notebook 06) and L3 counterfactual verification (notebook 07) with Fast, and compare the number of 9B calls | yes |
 
-완료 기준(`05_development_guide.md`): Humm-Gym 테스트 ECE 0.05 이하, 그래프 구축 시 LLM 호출 비용 절감.
+Completion criteria: ECE of at most 0.05 on the Humm-Gym test set, and lower LLM call cost during graph construction.
 
-> 학습 문항의 분할: Gym은 train(학습)·dev(보정)·test(평가)를 그대로 쓴다. bnlearn 네트워크는 asia·sachs·alarm(학습), insurance(보정), child·hepar2·win95pts·hailfinder(평가, Step 5 보류 네트워크)로 나눈다.""",
+> Data split: Gym uses its own train (training), dev (calibration) and test (evaluation) splits. The bnlearn networks are split into asia, sachs and alarm (training), insurance (calibration), and child, hepar2, win95pts and hailfinder (evaluation; the held-out networks of notebook 06).""",
 """import os
 
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")  # torch를 불러오기 전에 둔다(메모리 단편화 완화)
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")  # set before importing torch (reduces memory fragmentation)
 
 import gc
 import json
@@ -36,7 +36,7 @@ from humm.gym.dataset import read_jsonl
 from humm.paths import GYM, RESULTS, ROOT
 from humm.validate.benchmark import sample_bnlearn
 
-N_TRAIN = 40_000  # Gym train 10만 문항 중 학습에 쓸 수. 처리 속도를 보고 조절한다(3장 첫 로그)
+N_TRAIN = 40_000  # how many of the 100k Gym train items to use; adjust based on throughput (first log in section 3)
 TRAIN_NETS, CALIB_NETS = ["asia", "sachs", "alarm"], ["insurance"]
 graphs = {n: sample_bnlearn(n, 10)[0] for n in DEV + HELDOUT}
 rng = np.random.default_rng(0)
@@ -47,9 +47,9 @@ test_items = from_gym(read_jsonl(GYM / "test.jsonl")) + network_items(HELDOUT, g
 group = lambda d: d["source"] if d["source"] == "gym" else d["task"]
 pd.DataFrame([{"split": s, "group": group(d), "kind": d["kind"]} for s, its in [("train", train_items), ("dev", dev_items), ("test", test_items)] for d in its]
              ).value_counts().unstack("split").fillna(0).astype(int)""",
-"""md:## 2. (GPU) zero-shot 기준선
+"""md:## 2. (GPU) Zero-shot baselines
 
-기반 모델을 그대로 Fast 추론기로 쓴다. 보정 전(T=1)과, dev로 보기 종류별 온도만 맞춘 경우를 비교한다. 온도 보정은 정확도를 바꾸지 않고 확률의 날카로움만 바꾼다.""",
+Use the base models as-is as Fast judges. Compare uncalibrated (T=1) with a per-item-kind temperature fitted on dev. Temperature calibration does not change accuracy; it only changes how sharp the probabilities are.""",
 """gpu:import torch
 
 from humm.fast.judge import FastJudge
@@ -70,18 +70,18 @@ for model_id, device in MODELS.items():
     gc.collect()
     torch.cuda.empty_cache()
 temps""",
-"""md:## 3. (GPU) Qwen3.5-4B 미세조정
+"""md:## 3. (GPU) Fine-tuning Qwen3.5-4B
 
-- 손실: 답 토큰 위 제한 softmax와 정답(원-핫) 사이 교차 엔트로피. 적정 점수 규칙이라 학습 자체가 보정을 유도한다.
-- 기본은 **LoRA**(`FULL_FT = False`): 기반 가중치는 bf16으로 고정하고 모든 선형층에 r=16 보정만 fp32로 학습한다. GPU 메모리 약 20GB로, 다른 작업과 GPU0를 나눠 써도 들어간다. 학습 뒤 보정을 가중치에 합쳐 일반 모델로 저장한다.
-- `FULL_FT = True`는 fp32 전체 미세조정이다. 가중치·기울기·AdamW 상태만 약 64GB이고 활성값까지 90GB 가까이 쓰므로 GPU0를 혼자 쓸 때만 고른다. `nvidia-smi`로 다른 프로세스가 GPU0를 쓰고 있는지 먼저 확인한다.
-- 첫 평가 로그(200 step)의 `sec`로 전체 시간을 가늠한다. 오래 걸리면 `N_TRAIN`을 줄인다. `flash-linear-attention`·`causal-conv1d`를 설치하면 Qwen3.5의 선형 어텐션이 빨라진다.""",
+- Loss: cross-entropy between the restricted softmax over answer tokens and the gold (one-hot) label. It is a proper scoring rule, so training itself encourages calibration.
+- The default is **LoRA** (`FULL_FT = False`): the base weights stay frozen in bf16 and only rank-16 adapters on all linear layers are trained, in fp32. It needs about 20 GB of GPU memory. After training, the adapters are merged into the weights and saved as a regular model.
+- `FULL_FT = True` is full fp32 fine-tuning. Weights, gradients and AdamW state alone take about 64 GB, and with activations it approaches 90 GB, so choose it only when the GPU is exclusively yours. Check with `nvidia-smi` that no other process is using it first.
+- Use the `sec` column of the first evaluation log (step 200) to estimate the total time. If it takes too long, reduce `N_TRAIN`. Installing `flash-linear-attention` and `causal-conv1d` speeds up Qwen3.5's linear attention.""",
 """gpu:from humm.fast.lora import add_lora, merge_lora
 
 FULL_FT = False
 judge = FastJudge.load("Qwen/Qwen3.5-4B", device="cuda:0", dtype=torch.float32 if FULL_FT else torch.bfloat16, batch_size=16)
 n_params = sum(p.numel() for p in judge.model.parameters()) if FULL_FT else add_lora(judge.model, r=16, alpha=32)
-print(f"학습 파라미터 {n_params:,}개", "(전체)" if FULL_FT else "(LoRA)")
+print(f"Trainable parameters: {n_params:,} total", "(full)" if FULL_FT else "(LoRA)")
 eval_sub = [dev_items[i] for i in np.random.default_rng(1).choice(len(dev_items), 600, replace=False)]
 hist = train(judge, train_items, epochs=1, lr=1e-5 if FULL_FT else 1e-4, batch_size=8, grad_accum=4, eval_items=eval_sub, eval_every=200)
 hist.to_csv(RESULTS / "fast_history.csv", index=False)
@@ -94,11 +94,11 @@ res = predict(judge, test_items)
 preds["humm-fast-4b T=1"], preds["humm-fast-4b +T"] = rescale(res, {}), res
 judge.save(ROOT / "models" / "humm-fast-4b", {"base": "Qwen/Qwen3.5-4B", "method": "full" if FULL_FT else "lora r=16", "n_train": len(train_items), "train_nets": TRAIN_NETS})
 temps""",
-"""md:## 4. 평가
+"""md:## 4. Evaluation
 
-`group`은 gym(Humm-Gym 전체), pairwise(보류 네트워크의 엣지 방향 Choice), verify(보류 네트워크의 반사실 의존 Noul)이다. 문항별 확률은 `results/fast_predictions.csv`에 남겨 Mac에서 다시 분석할 수 있게 한다.
+`group` is gym (all of Humm-Gym), pairwise (edge-direction Choice items on the held-out networks) or verify (counterfactual-dependence Noul items on the held-out networks). Per-item probabilities are saved to `results/fast_predictions.csv` so they can be re-analyzed later without a GPU.
 
-> ECE만으로는 판단하지 않는다. 무작위 수준의 모델도 온도를 높이면(모든 확률을 0.5 근처로) ECE가 0에 가까워진다. 완료 기준 'ECE 0.05 이하'는 **정확도·Brier·AUROC가 zero-shot보다 좋아진 상태에서** 읽는다.""",
+> Do not judge by ECE alone. Even a chance-level model gets an ECE near 0 if the temperature is raised enough to push all probabilities toward 0.5. Read the 'ECE of at most 0.05' criterion **only when accuracy, Brier and AUROC are better than zero-shot**.""",
 """gpu:pred_df = pd.concat([r.assign(model=m, group=[group(d) for d in r.to_dict("records")]) for m, r in preds.items()], ignore_index=True)
 pred_df.assign(probs=pred_df.probs.map(lambda p: json.dumps(np.round(p, 5).tolist())), logits=pred_df.logits.map(lambda z: json.dumps(np.round(z, 4).tolist())))[
     ["id", "model", "group", "task", "kind", "lang", "source", "target_idx", "pred", "probs", "logits"]].to_csv(RESULTS / "fast_predictions.csv", index=False)
@@ -109,15 +109,15 @@ summ.pivot_table(index="model", columns="group", values=["acc", "ece"], sort=Fal
 by_task = pd.concat([evaluate(None, g, by=("task",)).assign(model=m) for m, g in gym.groupby("model", sort=False)])
 by_task.pivot_table(index="task", columns="model", values="acc", sort=False).round(3)""",
 """gpu:best = pred_df[(pred_df.model == "humm-fast-4b +T") & (pred_df.group == "gym")]
-print("Gym 테스트 전체:", {k: round(v, 4) for k, v in metrics(list(best.probs), best.target_idx).items()})
+print("Gym test overall:", {k: round(v, 4) for k, v in metrics(list(best.probs), best.target_idx).items()})
 reliability(list(best.probs), best.target_idx.to_numpy())""",
-"""md:## 5. (GPU) 지연 시간
+"""md:## 5. (GPU) Latency
 
-문항 하나씩(배치 1)과 32개 묶음의 순전파 시간을 잰다. 9B는 같은 방식(보기 로짓)으로 잰 값이고, 9B CoT는 문항당 수천 토큰을 생성하므로 수십 초가 걸린다(Step 3).""",
+Measure forward-pass time per item at batch size 1 and with batches of 32. The 9B figure is measured the same way (option logits); 9B CoT generates thousands of tokens per item and takes tens of seconds.""",
 """gpu:def latency(j, items, batch, reps=5):
     prompts = [d["prompt"] for d in items[: batch * reps]]
     j.batch_size = batch
-    j.logits(prompts[:batch], items[0]["labels"])  # 예열
+    j.logits(prompts[:batch], items[0]["labels"])  # warm-up
     torch.cuda.synchronize()
     out = []
     for r in range(reps):
@@ -137,9 +137,9 @@ torch.cuda.empty_cache()
 judge.batch_size = 16
 lat.to_csv(RESULTS / "fast_latency.csv", index=False)
 lat.round(1)""",
-"""md:## 6. 라우팅 (확신 낮은 문항만 느린 경로로)
+"""md:## 6. Routing (only low-confidence items go to the slow path)
 
-Step 3에서 9B CoT로 푼 Gym 테스트 600문항을 느린 경로로 삼는다. Fast의 최대 보기 확률이 임계값보다 낮은 문항만 CoT 답으로 바꿀 때, 상향 비율과 최종 정확도를 본다. CoT 파싱 실패는 균등 분포로 둔다.""",
+The slow path is the 600 Gym test items solved by 9B CoT in the Gym baseline run. Replace Fast's answer with the CoT answer only for items whose top option probability is below the threshold, and look at the escalation rate and the final accuracy. CoT parse failures are treated as a uniform distribution.""",
 """cot = pd.read_csv(RESULTS / "gym_baseline_qwen35.csv").query("mode == 'cot' and model == 'Qwen/Qwen3.5-9B'")
 fast = pd.read_csv(RESULTS / "fast_predictions.csv").query("model == 'humm-fast-4b +T'").set_index("id")
 cot = cot[cot.id.isin(fast.index)]
@@ -150,16 +150,16 @@ def cot_onehot(answer, kind, k):
     return np.eye(k)[idx] if idx is not None and 0 <= idx < k else np.full(k, 1 / k)
 s_probs = [cot_onehot(a, k, len(p)) for a, k, p in zip(cot.answer, cot.kind, f_probs)]
 target = fast.loc[cot.id, "target_idx"].to_numpy()
-pad = lambda ps: np.array([np.r_[p, np.zeros(8 - len(p))] for p in ps])  # 보기 수를 맞춰 한 행렬로
+pad = lambda ps: np.array([np.r_[p, np.zeros(8 - len(p))] for p in ps])  # pad to a common number of options so they form one matrix
 curve = pd.DataFrame(routing_curve(pad(f_probs), pad(s_probs), target, np.round(np.arange(0.5, 1.001, 0.05), 2)))
-print("Fast만:", round(float(np.mean([p.argmax() == t for p, t in zip(f_probs, target)])), 3), "| 9B CoT만:", round(float(np.mean([p.argmax() == t for p, t in zip(s_probs, target)])), 3))
+print("Fast only:", round(float(np.mean([p.argmax() == t for p, t in zip(f_probs, target)])), 3), "| 9B CoT only:", round(float(np.mean([p.argmax() == t for p, t in zip(s_probs, target)])), 3))
 curve.to_csv(RESULTS / "fast_routing.csv", index=False)
 curve.round(3)""",
-"""md:## 7. (GPU) 그래프 구축 연결
+"""md:## 7. (GPU) Graph-construction integration
 
-**정형(Step 5)**: 보류 네트워크 4개에서 쌍별 방향 판정을 (a) 9B, (b) Humm-Fast, (c) Fast 우선 + 확신이 낮을 때만 9B(`Routed`)로 바꿔 SID와 9B 호출 수를 비교한다. 데이터·설정은 Step 5 7장과 같다(5,000행, 혼합 모드). 9B 응답은 Step 5 기록을 재생하므로 새로 생성하지 않는다.
+**Tabular (notebook 06)**: on the four held-out networks, replace the pairwise direction judgment with (a) 9B, (b) Humm-Fast, or (c) Fast first with 9B only when confidence is low (`Routed`), and compare SID and the number of 9B calls. The data and settings are the same as in section 7 of notebook 06 (5,000 rows, hybrid mode). 9B responses are replayed from the notebook 06 recordings rather than regenerated.
 
-**텍스트(Step 6)**: 반사실 검증(L3)만 Fast로 바꾼다. 추출·정규화는 9B 기록을 재생하고, 검증 질의는 `Routed`가 Fast로 먼저 답한다.""",
+**Text (notebook 07)**: replace only counterfactual verification (L3) with Fast. Extraction and normalization replay the 9B recordings, and verification queries are answered by Fast first via `Routed`.""",
 """gpu:from humm.bench.metrics import graph_report
 from humm.fast.router import Routed
 from humm.graph.tabular import NETWORKS, tabular_to_hcg
@@ -186,7 +186,7 @@ pipe.pivot_table(index="prior", columns="network", values=["sid", "slow_calls"],
 trows = []
 for d in TEXT_VOCAB:
     for lang in ("ko", "en"):
-        c = make_corpus(d, lang, seed=1)  # Step 6과 같은 코퍼스: 추출·정규화는 9B 기록에서 재생된다
+        c = make_corpus(d, lang, seed=1)  # same corpus as notebook 07: extraction and normalization are replayed from the 9B recordings
         for label, prov in [("9B verify", slow), ("Fast verify→9B@0.8", Routed(fast, slow, 0.8))]:
             res = text_to_hcg(c.docs, f"{d}-{lang}", d, prov)
             gid = gold_ids(res.mapping, c)
@@ -200,14 +200,14 @@ slow.save()
 tpipe = pd.DataFrame(trows)
 tpipe.to_csv(RESULTS / "fast_pipeline_text.csv", index=False)
 tpipe.groupby("verify")[["verify_calls", "slow_verify_calls", "p_fwd_mean_true", "f1"]].mean().round(3)""",
-"""md:## 8. (GPU) 과제별 온도와 외부 일반화
+"""md:## 8. (GPU) Per-task temperature and external generalization
 
-7장까지의 1차 실행(2026-10-25)에서 두 가지가 드러났다.
+Two issues showed up in sections 1-7.
 
-- 보기 종류별 온도 하나를 Gym 계산형 문항과 도메인 지식 문항(쌍별 방향·반사실 검증)이 함께 쓰면, 지식 문항의 ECE가 0.17로 나빠진다. 그래서 지식 문항(`You are an expert in …`으로 시작)에는 온도를 따로 둔다(`knowledge:*`).
-- Gym 테스트 정확도 0.957이 생성기 문형에만 맞춘 결과인지 확인해야 한다. Step 1과 같은 CLadder·Corr2Cause Noul 문항으로 외부 일반화를 잰다.
+- When one temperature per option kind is shared by the computational Gym items and the domain-knowledge items (pairwise direction, counterfactual verification), the ECE on the knowledge items worsens to 0.17. Knowledge items (prompts starting with `You are an expert in …`) therefore get a separate temperature (`knowledge:*`).
+- We need to check whether the Gym test accuracy of 0.957 only reflects fitting the generator's sentence patterns. External generalization is measured on CLadder and Corr2Cause Noul items, the same ones used in the baseline benchmarks.
 
-1장 셀을 실행한 뒤 이 장만 돌려도 된다. 저장한 모델을 불러오고, 온도는 `humm_fast.json`에만 다시 쓴다.""",
+You can run just this section after running the cells of section 1. It loads the saved model and rewrites only the temperatures in `humm_fast.json`.""",
 """gpu:import torch
 
 from humm.bench import datasets as D, prompts as P, runner as R
@@ -238,20 +238,19 @@ pr = pr.assign(logits=pr.logits.map(lambda s: np.array(json.loads(s))))
 key = lambda g, k: f"knowledge:{k}" if g in ("pairwise", "verify") else k
 pr["probs"] = [apply_temperature([z], temps8.get(key(g, k), temps8.get(k, 1.0)))[0] for z, g, k in zip(pr.logits, pr.group, pr.kind)]
 pd.DataFrame([{"group": g, **metrics(list(d.probs), d.target_idx)} for g, d in pr.groupby("group")]).round(3)""",
-"""md:## Mac으로 옮길 파일
+"""md:## Result files
 
-실행한 노트북은 원본과 다른 이름으로 저장하고, `notebooks/`의 원본은 출력 없이 둔다.
+Files written by this notebook.
 
-| 파일 | 필수 여부 | 비고 |
+| File | Required | Notes |
 |---|---|---|
-| 이 노트북 | 필수 | `runs/<날짜>-gpu/` |
-| `results/fast_predictions.csv` | 필수 | 2~4장: 모델별 문항 확률·로짓(보정 전후) |
-| `results/fast_eval.csv`, `fast_history.csv` | 필수 | 4장 요약, 3장 학습 기록 |
-| `results/fast_latency.csv`, `fast_routing.csv` | 필수 | 5·6장 |
-| `results/fast_pipeline_tabular.csv`, `fast_pipeline_text.csv` | 필수 | 7장: 그래프 구축 연결 |
-| `results/llm_cache/humm-fast-4b.json`, `Qwen3.5-9B.json` | 필수 | 7장 응답 기록(Mac 재생용) |
-| `results/fast_external.csv`, `fast_temperature.json` | 필수 | 8장: CLadder·Corr2Cause 결과, 과제별 온도 |
-| `models/humm-fast-4b/` | 옮기지 않음 | 학습한 모델(약 8GB). GPU 서버에 둔다 |""",
+| `results/fast_predictions.csv` | yes | Sections 2-4: per-item probabilities and logits per model (before and after calibration) |
+| `results/fast_eval.csv`, `fast_history.csv` | yes | Section 4 summary, section 3 training history |
+| `results/fast_latency.csv`, `fast_routing.csv` | yes | Sections 5 and 6 |
+| `results/fast_pipeline_tabular.csv`, `fast_pipeline_text.csv` | yes | Section 7: graph-construction integration |
+| `results/llm_cache/humm-fast-4b.json`, `Qwen3.5-9B.json` | yes | Section 7 recorded responses (for replay without a GPU) |
+| `results/fast_external.csv`, `fast_temperature.json` | yes | Section 8: CLadder/Corr2Cause results, per-task temperatures |
+| `models/humm-fast-4b/` | no | The trained model (about 8 GB); too large to keep with the results |""",
 ]
 
 n = nbf.v4.new_notebook()

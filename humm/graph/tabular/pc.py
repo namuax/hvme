@@ -1,11 +1,11 @@
-"""PC 알고리즘(PC-stable) + 배경지식. 결과는 CPDAG(방향 엣지 + 방향 미정 엣지)이다.
+"""PC algorithm (PC-stable) + background knowledge. The result is a CPDAG (directed edges + undirected edges).
 
-배경지식(Knowledge)
-- tiers: 인과 순서 계층. 앞 계층 → 뒤 계층 방향만 허용한다.
-- forbidden: 금지된 방향 (u, v). required: 반드시 있어야 하는 방향 (u, v).
-- mode="hard": 배경지식을 골격 탐색 뒤 가장 먼저 적용한다(데이터 방향보다 우선).
-  mode="soft": 데이터가 정한 방향(v-구조·Meek 규칙)을 먼저 정하고, 남은 방향 미정 엣지에만 배경지식을 쓴다.
-  혼합: strong 인자로 받은 확실한 배경지식만 hard처럼, 나머지는 soft처럼 쓴다.
+Background knowledge (Knowledge)
+- tiers: causal order tiers. Only earlier tier -> later tier directions are allowed.
+- forbidden: forbidden directions (u, v). required: directions that must be present (u, v).
+- mode="hard": apply the knowledge first, right after skeleton search (takes priority over data-derived directions).
+  mode="soft": first fix directions decided by the data (v-structures, Meek rules), then use the knowledge only for the remaining undirected edges.
+  hybrid: only the certain knowledge passed as `strong` is applied like hard; the rest like soft.
 """
 from dataclasses import dataclass, field
 from itertools import combinations
@@ -32,7 +32,7 @@ class Knowledge:
         return (u, v) not in self.forbidden and not (u in t and v in t and t[u] > t[v])
 
     def prefers(self, u, v) -> bool:
-        """u → v 를 배경지식이 지지하는가(필수 엣지이거나, 계층이 앞서거나, 반대 방향이 금지됨)."""
+        """Does the knowledge support u -> v (required edge, earlier tier, or opposite direction forbidden)?"""
         t = self.tier_of
         return (u, v) in self.required or (u in t and v in t and t[u] < t[v]) or ((v, u) in self.forbidden and (u, v) not in self.forbidden)
 
@@ -52,7 +52,7 @@ class CPDAG:
         return {v for v in self.nodes if v != u and self.adjacent(u, v)}
 
     def orient(self, u, v, how: str) -> bool:
-        """u - v 를 u → v 로 바꾼다. 이미 방향이 있으면 바꾸지 않는다."""
+        """Orient u - v as u -> v. Does nothing if it is already directed."""
         e = frozenset((u, v))
         if e not in self.undirected:
             return False
@@ -68,7 +68,7 @@ def skeleton(ci: CITester, alpha: float, knowledge: Knowledge, max_cond: int = 3
     keep = {frozenset(e) for e in knowledge.required}
     sepsets = {}
     for level in range(max_cond + 1):
-        frozen = {v: set(a) for v, a in adj.items()}  # PC-stable: 단계 시작 시점의 인접 관계로 조건 집합을 고른다
+        frozen = {v: set(a) for v, a in adj.items()}  # PC-stable: choose conditioning sets from the adjacency at the start of the step
         for x in nodes:
             for y in sorted(frozen[x]):
                 if y not in adj[x] or frozenset((x, y)) in keep or len(frozen[x] - {y}) < level:
@@ -95,7 +95,7 @@ def orient_vstructures(g: CPDAG, knowledge: Knowledge) -> None:
 
 
 def meek(g: CPDAG) -> None:
-    """Meek 규칙 R1~R3을 바뀌는 것이 없을 때까지 적용한다."""
+    """Apply Meek rules R1-R3 until nothing changes."""
     changed = True
     while changed:
         changed = False
@@ -121,7 +121,7 @@ def apply_knowledge(g: CPDAG, knowledge: Knowledge) -> None:
 
 
 def to_dag(g: CPDAG, knowledge: Knowledge | None = None) -> nx.DiGraph:
-    """방향 미정 엣지를 계층·위상 순서에 맞춰 정해 DAG로 만든다. 방향 엣지끼리 사이클이 있으면 해당 엣지를 방향 미정으로 되돌린다."""
+    """Orient undirected edges according to tier/topological order to make a DAG. If directed edges form a cycle, those edges are reverted to undirected."""
     d = nx.DiGraph(sorted(g.directed))
     d.add_nodes_from(g.nodes)
     while not nx.is_directed_acyclic_graph(d):
@@ -141,12 +141,12 @@ def to_dag(g: CPDAG, knowledge: Knowledge | None = None) -> nx.DiGraph:
 
 def pc(df: pd.DataFrame, alpha: float = 0.01, knowledge: Knowledge | None = None, mode: str = "soft", max_cond: int = 3,
        method: str = "auto", strong: Knowledge | None = None) -> CPDAG:
-    """strong: 데이터보다 먼저 적용할 배경지식(혼합 모드). mode="hard"이면 knowledge 전체가 strong이 된다.
-    순서: strong 적용 → v-구조(strong에 어긋나지 않는 것만) → Meek → knowledge(soft) 적용 → Meek.
+    """strong: background knowledge applied before the data (hybrid mode). With mode="hard", all of knowledge becomes strong.
+    Order: apply strong -> v-structures (only those consistent with strong) -> Meek -> apply knowledge (soft) -> Meek.
     """
     knowledge = knowledge or Knowledge()
     strong = knowledge if mode == "hard" else (strong or Knowledge())
-    g = skeleton(CITester(df[sorted(df.columns)], method), alpha, knowledge, max_cond)  # 열 순서와 무관하게 같은 결과를 낸다
+    g = skeleton(CITester(df[sorted(df.columns)], method), alpha, knowledge, max_cond)  # gives the same result regardless of column order
     g.directed |= {(u, v) for u, v in knowledge.required if frozenset((u, v)) in g.undirected}
     g.undirected -= {frozenset(e) for e in knowledge.required}
     apply_knowledge(g, strong)
@@ -158,7 +158,7 @@ def pc(df: pd.DataFrame, alpha: float = 0.01, knowledge: Knowledge | None = None
 
 
 def edge_frequency(df: pd.DataFrame, n_boot: int = 20, seed: int = 0, **kw) -> pd.DataFrame:
-    """부트스트랩 재표본마다 PC를 다시 돌려, 인접(adjacency)과 방향(directed) 출현 빈도를 센다."""
+    """Rerun PC on each bootstrap resample and count how often each adjacency and each direction appears."""
     rng = np.random.default_rng(seed)
     adj, dire = {}, {}
     for _ in range(n_boot):

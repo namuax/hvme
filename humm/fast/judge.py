@@ -1,7 +1,7 @@
-"""Humm-Fast 추론기: 한 번의 순전파로 답 토큰(보기) 위의 확률을 낸다 (04_humm_fast.md 2장).
+"""Humm-Fast inference: one forward pass yields probabilities over the answer tokens (options).
 
-공급자 인터페이스(option_probs)를 따르므로 Step 5 쌍별 방향 질의·Step 6 L3 검증·Gym 평가에 그대로 끼운다.
-보정 온도는 보기 종류(noul·choice·score)별로 둔다. 학습한 모델은 save()로 가중치·토크나이저·온도를 함께 저장한다.
+It follows the provider interface (option_probs), so it plugs directly into pairwise direction queries, L3 verification and Gym evaluation.
+Calibration temperatures are kept per option kind (noul, choice, score). A trained model is saved with save(), which stores weights, tokenizer and temperatures together.
 """
 import json
 from pathlib import Path
@@ -11,7 +11,7 @@ import torch
 from scipy.special import softmax
 
 NOUL = {("Yes", "No"), ("예", "아니오")}
-KNOWLEDGE_PREFIX = "You are an expert in"  # PAIR_PROMPT(쌍별 방향)·VERIFY_PROMPT(반사실 검증): 도메인 지식 판단
+KNOWLEDGE_PREFIX = "You are an expert in"  # PAIR_PROMPT (pairwise direction) and VERIFY_PROMPT (counterfactual verification): domain-knowledge judgments
 
 
 def kind_of(labels) -> str:
@@ -20,13 +20,13 @@ def kind_of(labels) -> str:
 
 
 def temp_key(prompt: str, labels) -> str:
-    """보정 온도 키. 도메인 지식 판단과 계산형 판단(Gym 등)은 과신 정도가 달라 온도를 따로 둔다
-    (2026-10-25 GPU: 한 온도를 함께 쓰면 쌍별 방향 ECE 0.17, 따로 맞추면 0.08. reports/2026-10-25_humm_fast.md)."""
+    """Calibration temperature key. Domain-knowledge judgments and computational judgments (Gym etc.) differ in overconfidence, so they get separate temperatures
+    (measured: a shared temperature gives pairwise-direction ECE 0.17, separate ones 0.08)."""
     return f"knowledge:{kind_of(labels)}" if prompt.startswith(KNOWLEDGE_PREFIX) else kind_of(labels)
 
 
 def confidence(p: np.ndarray) -> float:
-    """1 − 정규화 엔트로피 (04_humm_fast.md)."""
+    """1 − normalized entropy."""
     p = np.clip(np.asarray(p, float), 1e-12, 1)
     return float(1 + (p * np.log(p)).sum() / np.log(len(p)))
 
@@ -50,7 +50,7 @@ class FastJudge:
         return cls(model, tok, Path(path_or_id).name if meta.exists() else path_or_id, temp, **kw)
 
     def save_temperature(self, path: str | Path) -> Path:
-        """가중치는 그대로 두고 humm_fast.json의 온도만 바꾼다."""
+        """Change only the temperatures in humm_fast.json, leaving the weights as is."""
         meta = Path(path) / "humm_fast.json"
         meta.write_text(json.dumps(json.loads(meta.read_text()) | {"temperature": self.temperature}, ensure_ascii=False, indent=1))
         return meta
@@ -62,7 +62,7 @@ class FastJudge:
         (path / "humm_fast.json").write_text(json.dumps({"temperature": self.temperature} | (extra or {}), ensure_ascii=False, indent=1))
         return path
 
-    # ---------- 입력 ----------
+    # ---------- Input ----------
     def encode(self, prompts: list[str]):
         msgs = [[{"role": "user", "content": p}] for p in prompts]
         text = [self.tok.apply_chat_template(m, tokenize=False, add_generation_prompt=True, enable_thinking=False) for m in msgs]
@@ -70,25 +70,25 @@ class FastJudge:
         return enc.to(self.model.device)
 
     def label_ids(self, labels) -> list[int]:
-        """답 토큰의 첫 토큰 id. 서로 겹치면 확률을 나눌 수 없으므로 막는다."""
+        """First-token id of each answer token. Overlaps are rejected because probability could not be split."""
         ids = [self.tok.encode(x, add_special_tokens=False)[0] for x in labels]
-        assert len(set(ids)) == len(ids), f"답 토큰의 첫 토큰이 겹친다: {labels}"
+        assert len(set(ids)) == len(ids), f"first tokens of the answer tokens overlap: {labels}"
         return ids
 
     def last_logits(self, enc) -> torch.Tensor:
-        """마지막 위치의 전체 어휘 로짓 [배치, 어휘]. logits_to_keep=1로 다른 위치의 로짓은 만들지 않는다."""
+        """Full-vocabulary logits at the last position [batch, vocab]. logits_to_keep=1 avoids computing logits at other positions."""
         return self.model(**enc, logits_to_keep=1).logits[:, -1].float()
 
-    # ---------- 추론 ----------
+    # ---------- Inference ----------
     @torch.inference_mode()
     def logits(self, prompts: list[str], labels) -> np.ndarray:
-        """보정 전 보기 로짓 [문항, 보기]."""
+        """Uncalibrated option logits [item, option]."""
         ids = self.label_ids(labels)
         out = [self.last_logits(self.encode(prompts[i:i + self.batch_size]))[:, ids].cpu().numpy() for i in range(0, len(prompts), self.batch_size)]
         return np.concatenate(out) if out else np.zeros((0, len(ids)))
 
     def temperature_for(self, prompt: str, labels) -> float:
-        """과제별 온도가 없으면 보기 종류 온도, 그것도 없으면 1."""
+        """Per-task temperature if present, else the option-kind temperature, else 1."""
         return self.temperature.get(temp_key(prompt, labels), self.temperature.get(kind_of(labels), 1.0))
 
     def option_probs(self, prompts: list[str], labels) -> list[list[float]]:

@@ -1,0 +1,17 @@
+{
+ "model": "humm Router 4B (Rung classifier, seed 0)",
+ "sets": {
+  "rung_cladder600": {
+   "n": 600,
+   "accuracy": 0.9917
+  },
+  "rung_kocladder": {
+   "n": 542,
+   "accuracy": 0.9834
+  },
+  "rung_demo": {
+   "n": 18,
+   "accuracy": 0.7222
+  }
+ }
+}

@@ -56,12 +56,12 @@ def test_apply_to_hcg_status_rules(binary_data):
     g, df = binary_data
     h = HCG.from_networkx(g, "demo")
     h.edge("X", "M").evidence.append(Evidence(kind=EvidenceKind.TEXT, score=0.8))
-    h.add_edge("Y", "Z", evidence=[Evidence(kind=EvidenceKind.LLM_PRIOR, score=0.1)])  # 사이클을 만드는 약한 엣지
+    h.add_edge("Y", "Z", evidence=[Evidence(kind=EvidenceKind.LLM_PRIOR, score=0.1)])  # weak edge that creates a cycle
     report, changes = validate_hcg(h, df, time={"Y": 2, "Z": 0}, n_perm=20)
     assert report.verdict == "pass" and report.structure["before_fix"]["cycles"]
     assert h.edge("Y", "Z").status == EdgeStatus.REFUTED
-    assert h.edge("X", "M").status == EdgeStatus.VERIFIED  # 텍스트 + 데이터 + pass
-    assert h.edge("Z", "X").status == EdgeStatus.HYPOTHESIS  # 데이터 증거뿐이라 방향 근거가 없다
+    assert h.edge("X", "M").status == EdgeStatus.VERIFIED  # text + data + pass
+    assert h.edge("Z", "X").status == EdgeStatus.HYPOTHESIS  # data evidence only, so no directional evidence
     assert any(e.method.startswith("ci:") for e in h.edge("Z", "X").evidence) and len(changes) == 6
 
 

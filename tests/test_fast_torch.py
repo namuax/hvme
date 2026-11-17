@@ -1,4 +1,4 @@
-"""작은 무작위 모델로 Humm-Fast 학습 루프를 확인한다(torch·transformers가 있을 때만)."""
+"""Check the Humm-Fast training loop with a small random model (only when torch and transformers are available)."""
 import numpy as np
 import pytest
 
@@ -28,7 +28,7 @@ def tiny_judge():
 
 
 def items(n, seed):
-    """'red'가 있으면 Yes(70%), 'blue'면 No(70%)인 잡음 섞인 과제."""
+    """A noisy task: 'red' gives Yes (70%), 'blue' gives No (70%)."""
     rng = np.random.default_rng(seed)
     out = []
     for i in range(n):
@@ -60,7 +60,7 @@ def test_train_calibrate_route():
 
 def test_save_load(tmp_path, monkeypatch):
     from transformers import AutoTokenizer, PreTrainedTokenizerFast
-    monkeypatch.setattr(AutoTokenizer, "from_pretrained", PreTrainedTokenizerFast.from_pretrained)  # 장난감 토크나이저는 config의 모델 종류(qwen2)를 따르지 않게 한다
+    monkeypatch.setattr(AutoTokenizer, "from_pretrained", PreTrainedTokenizerFast.from_pretrained)  # keep the toy tokenizer from following the model type (qwen2) in the config
     judge = tiny_judge()
     judge.temperature = {"noul": 1.7}
     judge.save(tmp_path / "m")
@@ -102,11 +102,11 @@ def test_sft_masks_prompt_and_learns():
     tok, model = judge.tok, judge.model
     ex = [{"prompt": "the item color is red", "response": "Yes"} if i % 2 else {"prompt": "the item color is blue", "response": "No"} for i in range(64)]
     ids, labels = encode(tok, ex[0], 64)
-    assert labels[: len(ids) - 2] == [-100] * (len(ids) - 2) and labels[-1] == tok.eos_token_id  # 풀이(Yes)와 EOS에만 손실
+    assert labels[: len(ids) - 2] == [-100] * (len(ids) - 2) and labels[-1] == tok.eos_token_id  # loss only on the solution (Yes) and EOS
     add_lora(model, r=4, alpha=8)
     hist = train_sft(model, tok, ex, epochs=20, lr=1e-2, batch_size=8, grad_accum=1, max_len=64, log_every=20, log=lambda r: None)
     assert hist.loss.iloc[-1] < hist.loss.iloc[0]
-    # 장난감 모델은 고정된 RMSNorm·묶인 출력층 때문에 로짓 폭이 작아 손실이 크게 줄지 않는다. 예측(argmax)이 맞는지로 학습을 확인한다
+    # the toy model has a small logit range (fixed RMSNorm, tied output layer), so the loss barely drops; check training by whether the prediction (argmax) is correct
     for color, ans in [("red", "Yes"), ("blue", "No")]:
         text = tok.apply_chat_template([{"role": "user", "content": f"the item color is {color}"}], tokenize=False, add_generation_prompt=True)
         out = model(**tok(text, return_tensors="pt", add_special_tokens=False)).logits[0, -1]
@@ -127,8 +127,8 @@ def test_sft_checkpoint_resume_matches_uninterrupted(tmp_path):
         return hist, {n: p.detach().clone() for n, p in judge.model.named_parameters()}
 
     ck = tmp_path / "ck.pt"
-    h1, w1 = run(ck)  # 6 step, 3 step에서 저장(마지막 step은 저장하지 않으니 끊긴 학습과 같다)
+    h1, w1 = run(ck)  # 6 steps, saved at step 3 (the last step is not saved, which is the same as an interrupted run)
     assert torch.load(ck, weights_only=False)["step"] == 3
-    h2, w2 = run(ck)  # 3 step부터 이어 학습
+    h2, w2 = run(ck)  # resume training from step 3
     _, w3 = run()
     assert h1.loss.tolist() == h2.loss.tolist() and all(torch.equal(w1[n], w2[n]) and torch.equal(w1[n], w3[n]) for n in w1)

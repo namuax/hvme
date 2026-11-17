@@ -17,7 +17,7 @@ def test_solutions_correct_all_types():
 
 
 def test_generation_reproducible_across_processes():
-    """문자열 해시 시드가 달라도(프로세스가 달라도) 같은 문항이 나온다."""
+    """The same items come out even with a different string-hash seed (i.e. across processes)."""
     code = "import hashlib,json;from humm.gym.dataset import generate;print(hashlib.sha1(json.dumps(generate(120,'train',seed=1),ensure_ascii=False).encode()).hexdigest())"
     out = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=os.environ | {"PYTHONHASHSEED": s}).stdout for s in ("1", "2")}
     assert len(out) == 1

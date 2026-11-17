@@ -1,9 +1,9 @@
-"""L1 구조 검증: DAG 여부, 자기 루프, 고립 노드, 시간 순서 위반."""
+"""L1 structure checks: DAG-ness, self loops, isolated nodes, time-order violations."""
 import networkx as nx
 
 
 def check_structure(g: nx.DiGraph, time: dict | None = None) -> dict:
-    """time: 노드 → 발생 시점(숫자). 원인이 결과보다 늦게 일어나는 엣지는 시간 순서 위반이다."""
+    """time: node → occurrence time (numeric). An edge whose cause happens after its effect is a time-order violation."""
     time = time or {}
     return {
         "is_dag": nx.is_directed_acyclic_graph(g),

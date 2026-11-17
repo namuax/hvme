@@ -1,17 +1,17 @@
-"""causal_engine 도구 (Step 9 SFT v2): 모델이 문맥에서 옮겨 쓴 변수·그래프·확률 문장·질의를 받아 엔진이 값을 계산한다.
+"""causal_engine tools: the model passes variables, graph, probability statements and a query transcribed from the context, and the engine computes the value.
 
-SFT 1차의 계산형 오답은 모델이 확률표에 없는 중간값(매개 노드를 거친 합산)을 지어낸 데서 나왔다(reports/2026-10-28_humm_lm_sft.md).
-그래서 모델은 그래프·질의·비교 대상까지만 정하고, 계산은 이 도구가 한다.
+Calculation errors in the first SFT round came from the model inventing intermediate values that are not in the probability table (sums through mediator nodes).
+So the model only decides the graph, the query and the comparison target; this tool does the computation.
 
-확률 문장은 조건부 확률표 항목이 아니어도 된다(CLadder처럼 결합·주변·역방향 조건부 확률을 주는 경우).
-모든 노드의 확률표를 매개변수로 두고 문장에 맞춘 뒤(최소제곱), 시작점을 바꿔 여러 번 풀어 값이 같으면 식별된 것으로 본다.
-값의 정의는 모두 '처치 세계 − 기준 세계'이다. 질문이 '높아지는가/더 가능한가'를 물으면 값이 양수일 때 '예'이다.
+Probability statements need not be conditional-probability-table entries (CLadder gives joint, marginal and reverse-conditional probabilities).
+The tables of all nodes are treated as parameters and fitted to the statements (least squares); the fit is solved several times from different starting points, and the value counts as identified if they agree.
+Every value is defined as 'treated world - baseline world'. If the question asks whether something increases or is more likely, the answer is yes when the value is positive.
 
-causal_discovery 도구 (SFT v2.2): Corr2Cause식 구조 질의. 모델은 전제의 상관·독립 문장을 그대로 넘기고 가설 종류만 고른다.
-v2.1은 변수 5–6개에서 동치류를 손으로 나열하다 틀렸다(골격 정확 35–48%, 동치류 크기 정확 2–4%, reports/2026-10-31_corr2cause_analysis.md).
+causal_discovery tool: Corr2Cause-style structure queries. The model passes the premise's correlation/independence statements as they are and only picks the hypothesis kind.
+Enumerating equivalence classes by hand with 5-6 variables went wrong (skeleton exact 35-48%, equivalence-class size exact 2-4%).
 
-causal_graph 도구 (SFT v2.5): 그래프만 주어지는 구조 질의(d-분리, 조정 집합 유효성, 식별 전략). v2.4는 경로를 손으로 점검하다
-인과 경로의 첫 엣지를 지우지 않거나 관측되지 않는 변수를 지어내 틀렸다(CLadder tool backadj 0.71, Gym identify 0.85).
+causal_graph tool: structure queries given only a graph (d-separation, adjustment-set validity, identification strategy). Checking paths by hand
+failed by not removing the first edge of a causal path or by inventing unobserved variables (CLadder tool backadj 0.71, Gym identify 0.85).
 """
 import json
 import re
@@ -101,9 +101,9 @@ class ToolError(ValueError):
 
 
 def _assign(text: str, states: dict) -> dict:
-    """'sales=high, ad=on' → {'sales': 1, 'ad': 1}. 상태 목록의 첫 번째가 1이다.
-    CLadder식 'not kwox and swoq'도 읽는다: 이름만 쓰면 첫 번째 상태, 'not 이름'은 두 번째 상태. 'gender=not male'은 다른 상태다(v2.12 평가 뒤).
-    상태 이름은 대소문자·공백·하이픈·아포스트로피를 무시하고 비교한다('non-smoker' = 'nonsmoker')."""
+    """'sales=high, ad=on' -> {'sales': 1, 'ad': 1}. The first state in the list is 1.
+    Also reads CLadder-style 'not kwox and swoq': a bare name is the first state, 'not name' is the second. 'gender=not male' is a different state.
+    State names are compared ignoring case, whitespace, hyphens and apostrophes ('non-smoker' = 'nonsmoker')."""
     out = {}
     for part in filter(None, (s.strip() for s in re.split(r",|\s+and\s+", text))):
         name, eq, st = (s.strip() for s in part.rpartition("="))
@@ -114,7 +114,7 @@ def _assign(text: str, states: dict) -> dict:
         if name not in states:
             raise ToolError(f"cannot read '{part}': " + (_undeclared([name], states) if eq else "use name=state with a declared variable and one of its two states"))
         keys = [_norm(s) for s in states[name]]
-        if st.lower().startswith("not ") and _norm(st[4:]) in keys:  # 'gender=not male' → 두 상태 중 male이 아닌 것
+        if st.lower().startswith("not ") and _norm(st[4:]) in keys:  # 'gender=not male' -> whichever of the two states is not male
             st = states[name][1 - keys.index(_norm(st[4:]))]
         if _norm(st) not in keys:
             raise ToolError(f"cannot read '{part}': {name} was declared with the states {' / '.join(states[name])}; use one of them")
@@ -123,7 +123,7 @@ def _assign(text: str, states: dict) -> dict:
 
 
 def _undeclared(names, declared) -> str:
-    """선언에 없는 이름을 짚는다. 무의미한 변수명을 옮겨 적다 철자를 틀리면(fjfq → fjq) 어느 이름인지 알아야 고친다."""
+    """Point out names that were not declared. When a meaningless variable name is mistyped while transcribing (fjfq -> fjq), the model needs to know which name is wrong in order to fix it."""
     return (f"{', '.join(names)} {'is not a declared variable' if len(names) == 1 else 'are not declared variables'} (declared: {', '.join(declared)}); "
             "spell each name exactly as in the question, the same way in variables, graph and probabilities")
 
@@ -146,12 +146,12 @@ def parse_statement(s: str, states: dict) -> tuple[dict, dict, float]:
 
 
 class Model:
-    """선언된 변수·그래프 위의 이진 확률표 모형. 모든 배정(2^n)을 펼쳐 확률을 계산한다."""
+    """Binary probability-table model over the declared variables and graph. Probabilities are computed by enumerating all assignments (2^n)."""
 
     def __init__(self, states: dict, edges: list[tuple[str, str]]):
         self.g = nx.DiGraph(edges)
         self.g.add_nodes_from(states)
-        self.lone = [v for v in states if edges and not self.g.degree(v)]  # 그래프 엣지에 없는 선언 변수
+        self.lone = [v for v in states if edges and not self.g.degree(v)]  # declared variables that have no graph edge
         if not nx.is_directed_acyclic_graph(self.g):
             raise ToolError("the graph has a cycle")
         self.nodes = list(nx.topological_sort(self.g))
@@ -187,7 +187,7 @@ class Model:
         return float(w[self.mask(target | given)].sum() / max(den, 1e-12))
 
     def cpt_entry(self, target: dict, given: dict):
-        """문장이 확률표 항목 그대로이면 (노드, 행 번호, 대상 값)."""
+        """If the statement is exactly a probability-table entry, return (node, row index, target value)."""
         if len(target) != 1:
             return None
         (v, x), = target.items()
@@ -224,14 +224,14 @@ class Model:
         cpt = self.split(th)
         w = self.joint(cpt)
         err = max([abs(self.cond(w, t, gv) - p) for t, gv, p in stmts] or [0.0])
-        if err > 2e-3:  # v2.9 재평가 뒤: 따로 선언한 변수는 불일치일 때만 짚는다(엣지 없는 변수만으로 오류를 내면 맞던 호출도 깨졌다)
+        if err > 2e-3:  # separately declared variables are flagged only on a mismatch (raising an error just for an edge-less variable broke calls that were otherwise correct)
             hint = f": {self.lone[0]} is declared but is in no edge of the graph; name each variable once, the same way in variables, graph, probabilities, treatment and outcome" if self.lone else ""
             raise ToolError(f"the probabilities are inconsistent with the graph (max error {err:.3f}){hint}")
         return cpt
 
 
 def evaluate(scm: BinarySCM, q: dict) -> tuple[float, list[tuple[str, float]]]:
-    """(값, [(항 이름, 값)])."""
+    """(value, [(term name, value)])."""
     query, (y, o) = q["query"], next(iter(q["outcome"].items()))
     eq = lambda vals: (vals[y] == o).astype(float)
     if query == "marginal":
@@ -250,7 +250,7 @@ def evaluate(scm: BinarySCM, q: dict) -> tuple[float, list[tuple[str, float]]]:
     if query == "ett":
         a, c = scm._mean(eq(scm.world({x: t})), f[x] == b), scm._mean(eq(f), f[x] == b)
         return a - c, [("P({o} had {t} | actually {b})", a), ("P({o} | {b})", c)]
-    if query in ("pn", "ps"):  # Tian–Pearl 상·하한. y = 결과 상태, x = 처치, x' = 기준
+    if query in ("pn", "ps"):  # Tian-Pearl upper/lower bounds. y = outcome state, x = treatment, x' = baseline
         py, pxy, pnn = scm._mean(eq(f)), scm._mean(eq(f) * (f[x] == t)), scm._mean((1 - eq(f)) * (f[x] == b))
         dyt, dyb = scm._mean(eq(scm.world({x: t}))), scm._mean(eq(scm.world({x: b})))
         lower = q["bound"] == "lower"
@@ -271,8 +271,8 @@ def evaluate(scm: BinarySCM, q: dict) -> tuple[float, list[tuple[str, float]]]:
 
 
 def _redeclare(states: dict, args: dict) -> tuple[dict, dict]:
-    """v2.15: 선언 상태와 호출에 쓴 상태가 다르면 쓴 상태로 읽는다. CauGym에서 상태를 지어내 선언하고(high / normal) 확률에는 지문대로(low) 써서
-    같은 오류를 세 번 받고 끝난 문항이 많았다. 쓴 상태가 둘이고 그중 선언에 없는 것이 있을 때, 또는 쓴 상태 하나가 선언에 없고 선언 상태 하나가 쓰이지 않았을 때만 바꾼다."""
+    """If the declared states differ from those used in the call, read the used states. On CauGym the model often invented states in the declaration (high / normal) but wrote the probabilities as in the passage (low),
+    got the same error three times and ended. Only rewrite when two used states exist and one of them is undeclared, or when one used state is undeclared and one declared state is unused."""
     text = json.dumps({k: args.get(k) for k in ("probabilities", "treatment", "baseline", "outcome", "fixed", "given")}, ensure_ascii=False).replace('": "', "=")
     used = {}
     for part in re.split(r'[,|()"\[\]{}]|\s+and\s+', text):
@@ -299,7 +299,7 @@ def _redeclare(states: dict, args: dict) -> tuple[dict, dict]:
 
 
 def _implied_edges(g: nx.DiGraph, stmts: list) -> list[tuple[str, str]]:
-    """확률 문장의 조건 변수 중 대상 변수의 부모가 아닌 것을 부모로 더하는 엣지(순환이 생기는 것은 뺀다)."""
+    """Edges that add, as parents, the conditioning variables of probability statements that are not already parents of the target variable (those creating a cycle are skipped)."""
     g, added = g.copy(), []
     for tg, gv, _ in stmts:
         for v in tg if len(tg) == 1 else ():
@@ -311,8 +311,8 @@ def _implied_edges(g: nx.DiGraph, stmts: list) -> list[tuple[str, str]]:
 
 
 def run(args: dict, restarts: int = 3, repair: bool = True) -> tuple[float, str]:
-    """도구 호출 하나를 실행한다. (값, 모델에 돌려줄 결과 문장). 잘못된 입력은 ToolError.
-    repair: 선언과 다른 상태를 쓴 상태로 읽고(_redeclare), 확률이 그래프와 맞지 않으면 조건 변수를 부모로 더해 본다(_implied_edges). 복구 궤적을 만들 때는 끈다."""
+    """Execute one tool call. Returns (value, result sentence to give back to the model). Invalid input raises ToolError.
+    repair: read states that differ from the declaration as the used states (_redeclare), and if the probabilities do not fit the graph, try adding the conditioning variables as parents (_implied_edges). Turned off when building recovery trajectories."""
     states = {k: [str(s) for s in v] for k, v in args["variables"].items()}
     if any(len(v) != 2 or v[0] == v[1] for v in states.values()):
         raise ToolError("every variable needs exactly two different states")
@@ -339,15 +339,15 @@ def run(args: dict, restarts: int = 3, repair: bool = True) -> tuple[float, str]
         raise ToolError("`given` is only for correlation and must not contain the treatment or the outcome")
     if query in ("pn", "ps") and q["bound"] not in ("lower", "upper"):
         raise ToolError("pn and ps need bound: lower or upper")
-    if {*q["treatment"], *q["outcome"]} & set(q["mediators"]):  # v2.9 named: 결과를 매개 집합에 넣으면 값이 0으로 나왔다
+    if {*q["treatment"], *q["outcome"]} & set(q["mediators"]):  # putting the outcome in the mediator set gave a value of 0
         raise ToolError("mediators are the variables between the treatment and the outcome: leave the treatment and the outcome out of them")
     model = Model(states, edges)
-    if query in ("nde", "nie") and not q["mediators"]:  # v2.12: 매개 집합을 비우면 처치 → 결과 경로 위의 변수 전부(없으면 nde = ate, nie = 0)
+    if query in ("nde", "nie") and not q["mediators"]:  # an empty mediator set means all variables on treatment -> outcome paths (if none, nde = ate, nie = 0)
         (x, _), (y, _) = next(iter(q["treatment"].items())), next(iter(q["outcome"].items()))
         q["mediators"] = sorted(nx.descendants(model.g, x) & nx.ancestors(model.g, y), key=model.nodes.index)
     stmts = [parse_statement(s, states) for s in args["probabilities"]]
     seen = {}
-    for s, (tg, gv, p) in zip(args["probabilities"], stmts):  # v2.9: 같은 조건을 두 번 쓴 실수는 불일치 대신 두 문장을 짚는다
+    for s, (tg, gv, p) in zip(args["probabilities"], stmts):  # a mistake of writing the same condition twice points to both statements instead of reporting a mismatch
         key = (tuple(sorted(tg.items())), tuple(sorted(gv.items())))
         if key in seen and abs(seen[key][1] - p) > 1e-9:
             raise ToolError(f"'{seen[key][0]}' and '{s}' give the same event under the same condition: each condition appears once, so one of them has a wrong state")
@@ -355,14 +355,14 @@ def run(args: dict, restarts: int = 3, repair: bool = True) -> tuple[float, str]
     added = []
     try:
         model.fit(stmts, seed=0)
-    except ToolError as e:  # v2.15: 부모가 아닌 변수로 조건 지은 확률이 그 변수에 따라 다르면 그래프에 없는 의존이다. 그 엣지를 더해 맞으면 그 그래프로 계산한다
+    except ToolError as e:  # a probability conditioned on a non-parent variable that varies with that variable is a dependence missing from the graph; if adding that edge makes it fit, compute with that graph
         added = _implied_edges(model.g, stmts) if repair else []
         if not str(e).startswith("the probabilities are inconsistent") or not added:
             raise
         model = Model(states, edges + added)
         model.fit(stmts, seed=0)
     vals, terms = [], None
-    for r in range(restarts * 4):  # 값이 갈리면 적합을 더 돌려 부호만이라도 정해지는지 본다
+    for r in range(restarts * 4):  # if values disagree, run more fits to see whether at least the sign is determined
         if r == restarts and max(vals) - min(vals) <= 2e-3:
             break
         cpt = model.fit(stmts, seed=r)
@@ -381,14 +381,14 @@ def run(args: dict, restarts: int = 3, repair: bool = True) -> tuple[float, str]
     if query in ("pn", "ps"):
         diff = f"{'max{0' if q['bound'] == 'lower' else 'min{1'}, ({names[0]} − {names[1]}) / {names[2]}}}"
     lines = [f"{n} = {p:.4f}" for n, (_, p) in zip(names, terms)] + [f"value = {diff} = {val:{'.4f' if query in ('pn', 'ps') else '+.4f'}}"]
-    if not args["probabilities"]:  # 확률 없이 정해지는 값(경로가 없어 0): 임의 적합의 항 값은 보이지 않는다
+    if not args["probabilities"]:  # value determined without probabilities (0 because no path exists): term values of an arbitrary fit are not shown
         lines = [f"value = {diff} = {val:+.4f} (determined by the graph alone, without probabilities)"]
     if query in ("nde", "nie") and not args.get("mediators"):
         lines.insert(0, f"mediators (variables on a directed path from the treatment to the outcome): {raw['m']}")
-    if query == "ett":  # v2.12: CaLM·CauGym의 ETT 값은 교과서 정의(실제 − 반사실)이다. value(반사실 − 실제)는 '더 가능했겠는가'의 부호다
+    if query == "ett":  # the ETT value in CaLM and CauGym uses the textbook definition (actual - counterfactual). value (counterfactual - actual) gives the sign for 'would it have been more likely'
         lines.append(f"ETT = E[outcome actual − outcome had {raw['t']} | actually {raw['b']}] = {names[1]} − {names[0]} = {0.0 - val:+.4f} "
                      "(the effect of treatment on the treated, actual minus counterfactual)")
-    if hi - lo > 2e-3:  # 점 식별은 안 되지만 모든 적합에서 부호가 같다
+    if hi - lo > 2e-3:  # not point-identified, but the sign is the same across all fits
         lines = [f"value = {diff} ranges from {lo:+.4f} to {hi:+.4f}: not point-identified, but the sign is {'positive' if lo > 0 else 'negative'} in every fit"]
     lines += [f"(note: {v} was declared with the states {' / '.join(a)}, but the call uses {' / '.join(b)}; the engine read its states as {' / '.join(b)})"
               for v, (a, b) in redeclared.items()]
@@ -407,11 +407,11 @@ KO_GIVEN = re.compile(r"주어지면|주어졌을 ?때|주어질 ?때|주어진 
 
 
 def parse_relation(s: str, names: list[str]) -> tuple[frozenset, frozenset | None]:
-    """'A and B are independent given C and D.' → ({A, B}, {C, D}), 'A correlates with B.' → ({A, B}, None). 한국어 Gym 문장도 읽는다."""
+    """'A and B are independent given C and D.' → ({A, B}, {C, D}), 'A correlates with B.' → ({A, B}, None). Also reads Korean Gym sentences."""
     indep = "independent" in s or "독립" in s
     if not indep and "correlat" not in s and "상관" not in s:
         raise ToolError(f"cannot read relation '{s}': expected 'X correlates with Y.' or 'X and Y are independent given Z.'")
-    ko = KO_GIVEN.search(s)  # 한국어는 조건이 앞에 온다: 'C 가 주어졌을 때 A 와 B 는 독립이다.'
+    ko = KO_GIVEN.search(s)  # In Korean the condition comes first: 'C 가 주어졌을 때 A 와 B 는 독립이다.'
     cond, main = (s[:ko.start()], s[ko.end():]) if ko else (s.partition(" given ")[2], s.partition(" given ")[0])
     pair, given = _names_in(main, names), _names_in(cond, names)
     if len(set(pair)) != 2 or set(given) & set(pair) or (given and not indep):
@@ -420,7 +420,7 @@ def parse_relation(s: str, names: list[str]) -> tuple[frozenset, frozenset | Non
 
 
 def run_discovery(args: dict) -> tuple[bool, str]:
-    """구조 질의 도구 호출 하나를 실행한다. (함의 여부, 모델에 돌려줄 결과 문장)."""
+    """Execute one structure-query tool call. Returns (whether it is implied, result sentence to give back to the model)."""
     names = [str(v) for v in args["variables"]]
     h, a, b = args["hypothesis"], str(args["a"]), str(args["b"])
     if h not in HYPOTHESES or a not in names or b not in names or a == b:
@@ -455,7 +455,7 @@ def _set(vs) -> str:
 
 
 def _paths(g: nx.DiGraph, a, b, z: set, limit: int = 6) -> tuple[list[str], bool]:
-    """경로마다 열림/막힘(열린 경로 먼저). (문장 목록, 열린 경로가 있는가)."""
+    """Open/blocked status per path (open paths first). (list of sentences, whether an open path exists)."""
     arrow = lambda p: "".join(f"{u} {'→' if g.has_edge(u, v) else '←'} " for u, v in zip(p, p[1:])) + p[-1]
     status = sorted(((p, blocked_by(g, p, z)) for p in paths_between(g, a, b)), key=lambda s: s[1] is not None)
     lines = [f"- {arrow(p)}: " + ("open" if r is None else f"blocked at {r[0]} ({'a collider not conditioned on, nor its descendants' if r[1] == 'collider' else 'a conditioned non-collider'})")
@@ -465,7 +465,7 @@ def _paths(g: nx.DiGraph, a, b, z: set, limit: int = 6) -> tuple[list[str], bool
 
 
 def run_graph(args: dict) -> tuple[str, str]:
-    """그래프 구조 질의 도구 호출 하나를 실행한다. (판정, 모델에 돌려줄 결과 문장)."""
+    """Execute one graph-structure query tool call. Returns (verdict, result sentence to give back to the model)."""
     names = [str(v) for v in args["variables"]]
     edges = []
     for e in args["graph"]:
@@ -482,23 +482,23 @@ def run_graph(args: dict) -> tuple[str, str]:
     query, a, b = args["query"], str(args["a"]), str(args["b"])
     latent, given = [str(v) for v in args.get("unobserved", [])], [str(v) for v in args.get("given", [])]
     sets = [[str(v) for v in z] for z in args.get("sets", [])]
-    bi = [tuple(x.strip() for x in re.split(r"<->|↔|\band\b", str(p))) for p in args.get("confounded", [])]  # v2.14: CaLM CEI
+    bi = [tuple(x.strip() for x in re.split(r"<->|↔|\band\b", str(p))) for p in args.get("confounded", [])]  # CaLM CEI
     if any(len(p) != 2 or not set(p) <= set(names) or p[0] == p[1] for p in bi):
         raise ToolError("cannot read `confounded`: write each pair of declared variables with a shared unobserved confounder as 'A <-> B'")
     if bi and latent:
         raise ToolError("give unobserved confounders either as `unobserved` variables with their edges or as `confounded` pairs, not both")
-    if query == "identify" and a == b and a in names:  # CaLM CEI에 처치와 결과가 같은 문항이 있다
+    if query == "identify" and a == b and a in names:  # CaLM CEI contains items where treatment and outcome are the same
         return "identified", f"the treatment and the outcome are the same variable {a}: do({a}) sets it directly, so the effect is identified\nidentified: yes"
-    if query not in GRAPH_QUERIES:  # v2.9: det-cf를 causal_graph로 부른 실수(CLadder tool)
+    if query not in GRAPH_QUERIES:  # mistake of calling det-cf through causal_graph (CLadder tool)
         raise ToolError(f"query must be one of {', '.join(GRAPH_QUERIES)}; a deterministic counterfactual with stated rules needs no tool: apply the rules by hand")
     if a == b or not {a, b, *latent, *given, *sum(sets, [])} <= set(names):
         raise ToolError(f"query must be one of {', '.join(GRAPH_QUERIES)}, with two different declared variables a and b and only declared variables elsewhere")
-    for u, v in bi:  # 경로 점검에는 교란 쌍마다 관측 안 된 공통 원인 노드를 넣는다
+    for u, v in bi:  # for path checking, add an unobserved common-cause node for each confounded pair
         g.add_edges_from([(f"U[{u},{v}]", u), (f"U[{u},{v}]", v)])
         latent.append(f"U[{u},{v}]")
     if query in ("frontdoor", "instrument") and not sets:
         raise ToolError(f"{query} needs `sets`, e.g. [[\"M\"], [\"Z\"]]")
-    if query == "frontdoor":  # v2.14: CaLM FAS
+    if query == "frontdoor":  # CaLM FAS
         lines, verdicts = [], []
         for m in sets:
             cut = g.copy()
@@ -511,7 +511,7 @@ def run_graph(args: dict) -> tuple[str, str]:
             verdicts.append("valid" if ok else "not valid")
             lines.append(f"set {_set(m)}: {verdicts[-1]} ({why})")
         return ", ".join(verdicts), "\n".join(lines)
-    if query == "instrument":  # v2.14: CaLM IV(처치의 부모이면서 처치를 거치지 않고는 결과와 이어지지 않는 변수, DoWhy 정의)
+    if query == "instrument":  # CaLM IV (a parent of the treatment that reaches the outcome only through the treatment; DoWhy definition)
         lines, verdicts = [f"parents (direct causes) of {a}: {_set(set(g.predecessors(a)) - set(latent))}"], []
         for z in sets:
             why = []
@@ -521,7 +521,7 @@ def run_graph(args: dict) -> tuple[str, str]:
             verdicts.append("not valid" if why else "valid")
             lines.append(f"set {_set(z)}: {verdicts[-1]} ({'; '.join(why) if why else 'every variable is a direct cause of ' + a + ' with no path to ' + b + ' except through ' + a})")
         return ", ".join(verdicts), "\n".join(lines)
-    if query == "path":  # v2.13: CaLM AR·CA(부모·조상)에 dsep을 불러 '독립 아님'을 '원인'으로 읽던 실수
+    if query == "path":  # CaLM AR/CA (parent/ancestor) used to be answered with dsep, reading 'not independent' as 'cause'
         parent, anc = g.has_edge(a, b), nx.has_path(g, a, b)
         lines = [f"parents of {b}: {_set(g.predecessors(b))}",
                  f"directed path from {a} to {b}: {' → '.join(nx.shortest_path(g, a, b)) if anc else 'none'}"]
@@ -559,7 +559,7 @@ def run_graph(args: dict) -> tuple[str, str]:
                 lines.append(f"instrument: {iv[0] + ' is a valid instrument' if iv else 'no valid instrument'}")
     name = {"no_effect": "no causal effect", "backdoor": "back-door adjustment", "frontdoor": "front-door adjustment", "iv": "instrumental variable",
             "not_identified": "not identifiable from the observed variables"}[e.strategy]
-    if bi:  # v2.14: 교란 쌍이 있으면 ID 알고리즘(비모수, 완전)이 판정한다. 도구변수는 선형 가정이라 식별로 치지 않는다
+    if bi:  # if confounded pairs exist, the ID algorithm (nonparametric, complete) decides. Instrumental variables assume linearity, so they do not count as identification
         obs = g.subgraph(names)
         ok = id_identifiable(obs, [frozenset(p) for p in bi], a, b)
         lines = [f"unobserved confounders: {', '.join(f'{u} <-> {v}' for u, v in bi)}"] + [l for l in lines if not l.startswith("instrument")]
@@ -571,19 +571,19 @@ def run_graph(args: dict) -> tuple[str, str]:
 RUNNERS = {"causal_engine": run, "causal_discovery": run_discovery, "causal_graph": run_graph}
 
 
-# ---------- Qwen3.5 도구 호출 형식 ----------
+# ---------- Qwen3.5 tool-call format ----------
 CALL = re.compile(r"<tool_call>\s*<function=([^>\s]+)>(.*?)</function>\s*</tool_call>", re.S)
 PARAM = re.compile(r"<parameter=([^>\s]+)>\n?(.*?)\n?</parameter>", re.S)
 
 
 def format_call(args: dict, name: str = "causal_engine") -> str:
-    """채팅 템플릿이 tool_calls를 렌더링하는 방식과 같다(문자열은 그대로, 나머지는 JSON)."""
+    """Same as how the chat template renders tool_calls (strings as is, everything else as JSON)."""
     body = "".join(f"<parameter={k}>\n{v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)}\n</parameter>\n" for k, v in args.items())
     return f"<tool_call>\n<function={name}>\n{body}</function>\n</tool_call>"
 
 
 def parse_call(text: str) -> dict | None:
-    """마지막 도구 호출의 인자. 호출이 없으면 None."""
+    """Arguments of the last tool call, or None if there is no call."""
     calls = CALL.findall(text)
     if not calls:
         return None
@@ -596,13 +596,13 @@ def parse_call(text: str) -> dict | None:
     return out
 
 
-AUTOFIX = True  # 같은 이름 오류가 두 번 나면 가까운 선언 이름으로 읽는다. 끈 평가 값은 results/lm_v28/reeval_repeat/
+AUTOFIX = True  # if the same name error occurs twice, read it as the closest declared name
 REPEAT = "error: this call is identical to the previous call"
 UNDECLARED = re.compile(r"(?:^|: )([^:()']+?) (?:is not a declared variable|are not declared variables) \(declared: ([^)]*)\)")
 
 
 def _repeat(args: dict, error: str) -> str:
-    """오류를 받은 호출과 같은 인자를 다시 보냈을 때의 오류. 같은 인자는 같은 오류를 내므로 엔진을 다시 돌리지 않고, 틀린 이름이 어느 인자에 있는지 짚는다."""
+    """Error for re-sending the same arguments as a call that got an error. The same arguments give the same error, so the engine is not run again; the message points out which argument holds the wrong name."""
     msg = f"{REPEAT[7:]}, which failed ({error.removeprefix('error: ').split('; ')[0]}); the same arguments give the same error"
     fixes = []
     for names, declared in UNDECLARED.findall(error):
@@ -614,7 +614,7 @@ def _repeat(args: dict, error: str) -> str:
 
 
 def _distance(a: str, b: str) -> int:
-    """편집 거리(글자 빠짐·겹침·바꿈 하나가 1)."""
+    """Edit distance (one missing, extra or substituted character counts as 1)."""
     row = list(range(len(b) + 1))
     for i, ca in enumerate(a, 1):
         prev, row[0] = row[0], i
@@ -624,7 +624,7 @@ def _distance(a: str, b: str) -> int:
 
 
 def _autofix(args: dict, error: str) -> tuple[dict, dict] | None:
-    """이름 오류의 이름마다 편집 거리 2 이하로 가장 가까운 선언 이름이 하나뿐이면 (그 이름으로 바꾼 인자, {틀린 이름: 선언 이름})."""
+    """If each name in a name error has exactly one closest declared name within edit distance 2, return (arguments with the names replaced, {wrong name: declared name})."""
     subs = {}
     for names, declared in UNDECLARED.findall(error):
         for n in names.split(", "):
@@ -642,15 +642,15 @@ def _execute(name: str, args: dict, repair: bool = True) -> str:
     f = RUNNERS.get(name, run)
     try:
         return (f(args, repair=repair) if f is run else f(args))[1]
-    except (ToolError, KeyError, TypeError, AttributeError, ValueError) as e:  # ValueError: 샘플링 출력의 '0.28.' 같은 숫자
+    except (ToolError, KeyError, TypeError, AttributeError, ValueError) as e:  # ValueError: numbers like '0.28.' in sampled output
         return f"error: {e}"
 
 
 def respond(text: str, prev: str = "", autofix: bool = AUTOFIX, repair: bool = True) -> str:
-    """모델 출력의 도구 호출을 실행해 결과 문장을 돌려준다. 오류도 문장으로 돌려 모델이 고칠 수 있게 한다.
+    """Execute the tool call in the model output and return the result sentence. Errors are also returned as sentences so the model can fix them.
 
-    prev: 이 호출 앞의 출력(호출·<tool_response> 블록). 바로 앞 호출이 오류였고 이번 호출이 그와 같으면 엔진을 다시 돌리지 않는다.
-    이름 오류이고 autofix면 가까운 선언 이름으로 읽어 실행하고 그렇게 읽었다고 덧붙인다(_autofix). 아니면 _repeat 오류를 돌려준다.
+    prev: output before this call (calls and <tool_response> blocks). If the immediately preceding call was an error and this call is identical, the engine is not run again.
+    For a name error with autofix, it reads the closest declared name, runs, and appends a note that it did so (_autofix). Otherwise it returns the _repeat error.
     """
     name, args = CALL.findall(text)[-1][0], parse_call(text)
     last = CALL.findall(prev)[-1:]

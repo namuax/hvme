@@ -13,7 +13,7 @@ def _items():
 def test_numbers_kept_and_paraphrased():
     d = next(x for x in _items() if x["query_type"] == "ate")
     assert numbers_kept(d["context"], "x " + d["context"])
-    assert not numbers_kept(d["context"], d["context"] + " The probability of zorp is 9137%.")  # 지어낸 숫자
+    assert not numbers_kept(d["context"], d["context"] + " The probability of zorp is 9137%.")  # invented number
     dropped = d["context"].replace(next(t for t in d["context"].split() if t[0].isdigit()), "many")
     assert paraphrased(d, dropped) is None
     p = paraphrased(d, "  " + d["context"] + " ")
@@ -26,16 +26,16 @@ def test_storied_keeps_numbers_and_orig_label():
     ok = f"Some preface.\nPassage: In a farm study, {d['context']}\nQuestion: Does rain help the harvest?\n\nNote: extra."
     s = storied(d, ok)
     assert s["id"] == d["id"] + "-s" and s["question"] == "Does rain help the harvest?" and s["meta"]["orig_label"] == d["label"]
-    assert storied(d, ok.replace("Passage:", "Text:")) is None  # 형식이 다르다
+    assert storied(d, ok.replace("Passage:", "Text:")) is None  # different format
     assert storied(d, ok + "\nQuestion: Does rain help the harvest?")["question"] == "Does rain help the harvest?"
-    assert storied(d, ok + "\nQuestion: Does rain hurt the harvest?") is None  # 질문을 다르게 두 번
-    assert storied(d, ok.replace("Question: Does", "Question: Is 9137% enough, does")) is None  # 지어낸 숫자
+    assert storied(d, ok + "\nQuestion: Does rain hurt the harvest?") is None  # question written twice, differently
+    assert storied(d, ok.replace("Question: Does", "Question: Is 9137% enough, does")) is None  # invented number
 
 
 def test_verified_drops_engine_errors_and_loops():
     assert verified(OK) == "yes"
     assert verified(ERR) is None
-    assert verified("Final answer: no") == "no"  # 도구를 부르지 않는 문항(det-cf 손풀이)
+    assert verified("Final answer: no") == "no"  # item that does not call a tool (det-cf worked by hand)
     assert verified("\n".join(["the same long line again"] * 5) + "\nFinal answer: no") is None
 
 
@@ -48,7 +48,7 @@ def test_targets_follow_verified_answers():
     assert target_from(noul, [None, None]) is None
     samples = [{"id": noul["id"], "output": OK}] * 3 + [{"id": noul["id"], "output": ERR}, {"id": choice["id"], "output": ERR}]
     out = distill_items([noul, choice], samples, alpha=0.1)
-    assert [d["id"] for d in out] == [noul["id"]]  # 검증된 풀이가 없는 문항은 버린다
+    assert [d["id"] for d in out] == [noul["id"]]  # items with no verified solution are dropped
     assert out[0]["n_samples"] == 4 and out[0]["n_verified"] == 3 and abs(out[0]["target"][0] - 3.1 / 3.2) < 1e-9
 
 

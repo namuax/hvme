@@ -1,4 +1,4 @@
-"""Humm Causal Graph(HCG) 스키마. preliminary/02_proposal.md 4.1, 03_dag_validation.md 7장 규칙을 따른다."""
+"""Humm Causal Graph (HCG) schema."""
 from datetime import date
 from enum import Enum
 from pathlib import Path
@@ -23,7 +23,7 @@ class EdgeStatus(str, Enum):
     REFUTED = "refuted"
 
 
-# 증거 종류별 가중치: 실험 > 데이터 ≈ 전문가 > 텍스트 > LLM 사전지식
+# Weight per evidence kind: experiment > data ~ expert > text > LLM prior
 KIND_WEIGHT = {
     EvidenceKind.EXPERIMENT: 1.0,
     EvidenceKind.DATA: 0.8,
@@ -70,7 +70,7 @@ class Edge(BaseModel):
         return (self.src, self.dst)
 
     def update_confidence(self) -> float:
-        """noisy-OR 결합: 1 - Π(1 - w_kind · score)."""
+        """noisy-OR combination: 1 - prod(1 - w_kind * score)."""
         miss = 1.0
         for e in self.evidence:
             miss *= 1 - KIND_WEIGHT[e.kind] * e.score
@@ -78,7 +78,7 @@ class Edge(BaseModel):
         return self.confidence
 
     def promote(self) -> EdgeStatus:
-        """hypothesis → supported: 서로 다른 종류의 증거가 2개 이상일 때. verified·refuted 판정은 humm.validate가 맡는다."""
+        """hypothesis -> supported: when there are at least 2 distinct kinds of evidence. verified/refuted decisions are made by humm.validate."""
         kinds = {e.kind for e in self.evidence}
         self.status = EdgeStatus.SUPPORTED if self.status == EdgeStatus.HYPOTHESIS and len(kinds) >= 2 else self.status
         return self.status
@@ -99,14 +99,14 @@ class HCG(BaseModel):
     @model_validator(mode="after")
     def _check(self):
         ids = [n.id for n in self.nodes]
-        assert len(ids) == len(set(ids)), "중복 노드 id가 있다"
+        assert len(ids) == len(set(ids)), "duplicate node ids"
         unknown = {x for e in self.edges for x in e.key} - set(ids)
-        assert not unknown, f"정의되지 않은 노드를 가리키는 엣지가 있다: {sorted(unknown)}"
+        assert not unknown, f"edges reference undefined nodes: {sorted(unknown)}"
         keys = [e.key for e in self.edges]
-        assert len(keys) == len(set(keys)), "중복 엣지가 있다"
+        assert len(keys) == len(set(keys)), "duplicate edges"
         return self
 
-    # --- 조회 ---
+    # --- queries ---
     def node(self, node_id: str) -> Node:
         return next(n for n in self.nodes if n.id == node_id)
 
@@ -116,7 +116,7 @@ class HCG(BaseModel):
     def active_edges(self) -> list[Edge]:
         return [e for e in self.edges if e.status != EdgeStatus.REFUTED]
 
-    # --- 변경 ---
+    # --- mutations ---
     def add_node(self, node_id: str, **kw) -> Node:
         node = Node(id=node_id, **kw)
         self.nodes.append(node)
@@ -129,7 +129,7 @@ class HCG(BaseModel):
         self._check()
         return edge
 
-    # --- 그래프 연산 ---
+    # --- graph operations ---
     def to_networkx(self, include_refuted: bool = False) -> nx.DiGraph:
         g = nx.DiGraph()
         g.add_nodes_from((n.id, n.model_dump(exclude={"id"})) for n in self.nodes)
@@ -144,7 +144,7 @@ class HCG(BaseModel):
         return list(nx.simple_cycles(self.to_networkx()))
 
     def break_cycles(self) -> list[tuple[str, str]]:
-        """사이클마다 confidence가 가장 낮은 엣지를 refuted로 바꾼다(03_dag_validation.md 7.1)."""
+        """For each cycle, mark the lowest-confidence edge as refuted."""
         refuted = []
         while not self.is_dag():
             cycle = self.cycles()[0]
@@ -160,7 +160,7 @@ class HCG(BaseModel):
         edges = [Edge(src=str(u), dst=str(v)) for u, v in g.edges]
         return cls(graph_id=graph_id, nodes=nodes, edges=edges, **kw)
 
-    # --- 저장 ---
+    # --- persistence ---
     def save(self, path: str | Path) -> Path:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,19 +1,19 @@
-"""Humm-LM GRPO (Step 9-4): SFT v2.1에서 시작해 검증 가능 보상(엔진 정답)으로 도구 사용 풀이를 다듬는다.
+"""Humm-LM GRPO: starting from the SFT model, refine tool-using solutions with a verifiable reward (the engine answer).
 
-- 문항마다 G개 rollout(도구 실행 포함, humm.lm.sample.generate_tools) → 보상 → 묶음 안에서 표준화한 이점(advantage)
-- 보상: 정답 1, 'Final answer' 없음 −0.2, 반복 루프 −0.1, 4,000자 넘는 길이 최대 −0.1. 도구 오류 뒤 고친 재호출은 깎지 않는다
-- 2차(proc=True): 이진·선택형 구조 유형(dsep·backadj·identify·corr2cause)은 답만 맞힌 풀이도 1을 받아 운이 강화됐다(1차 리포트 3-1).
-  정답 보상에 과정 점수(엔진 풀이 humm.lm.solutions의 3단계 이후 핵심 줄 중 모델 출력에 있는 비율, 줄 안 나열 순서는 무시)를 곱한다
-- 보상이 모두 같은 묶음은 기울기가 없으므로 버린다(DAPO의 동적 샘플링)
-- 손실: 어시스턴트 토큰(도구 결과 제외)에 −A·log π를 토큰 평균한다. rollout마다 한 번 갱신하는 on-policy라 비율 클리핑은 없다.
-  기준 모델(LoRA를 끈 SFT v2.1)과의 KL(k3 추정)을 β로 더한다. kl_target을 주면 β를 적응형으로 조절한다(KL이 목표의 2배를 넘으면 ×1.5, 절반 밑이면 ÷1.5, 시작 β 밑으로는 내리지 않는다.
-  2차에서 하한 없이 돌렸더니 초반 KL이 작아 β가 3e-6까지 떨어져 제약이 꺼졌다)
-- 3차(SFT v2.8에서 시작): 오류를 받고도 같은 인자로 다시 부르는 행동을 다룬다(v2.10은 복구 궤적 SFT로 바뀌지 않았다).
-  문항에 'prefix'(trajectories.error_prefix: 실수를 넣은 첫 호출과 엔진 오류)가 있으면 그 뒤부터 rollout하고, 앞부분 턴은 손실에서 뺀다.
-  rep>0이면 오류 바로 뒤 같은 인자 재호출마다 rep를 깎는다(앞부분 안의 재호출은 세지 않는다). dev_cot은 도구 없는 풀이(render 'cot')의 퇴보 감시용이다
-- dev를 주면 eval_every step마다 greedy로 풀어 정답률·구조 유형 정답률·과정 점수를 기록한다(체크포인트 고르기)
-- rollout은 두 GPU에서 나눠 돌린다: 학습 모델과, 매 step LoRA 가중치를 받는 생성 전용 하위 프로세스(Roller).
-  fla의 Triton 자동 튜너가 스레드 안전하지 않아 스레드 대신 프로세스를 쓴다. Roller.close()로 끝내면 그 GPU 메모리도 풀린다
+- G rollouts per item (including tool execution, humm.lm.sample.generate_tools) -> reward -> advantage standardized within the group
+- Reward: 1 for a correct answer, -0.2 for a missing 'Final answer', -0.1 for a repetition loop, up to -0.1 for length over 4,000 characters. A corrected re-call after a tool error is not penalized
+- proc=True: on binary/multiple-choice structure types (dsep, backadj, identify, corr2cause) a solution with only the right answer also got 1, which reinforced luck.
+  The correct-answer reward is multiplied by a process score (fraction of the engine solution's (humm.lm.solutions) key lines after step 3 that appear in the model output; order within a line is ignored)
+- Groups whose rewards are all equal have no gradient and are dropped (DAPO dynamic sampling)
+- Loss: -A * log pi averaged over assistant tokens (tool results excluded). It is on-policy with one update per rollout, so there is no ratio clipping.
+  The KL to the reference model (the SFT model with LoRA disabled; k3 estimate) is added with weight beta. If kl_target is given, beta adapts (x1.5 when KL exceeds twice the target, /1.5 when below half, never below the initial beta;
+  without that floor, beta fell to 3e-6 because early KL was small, which switched the constraint off)
+- Error recovery: handles re-calling with the same arguments after receiving an error.
+  If an item has a 'prefix' (trajectories.error_prefix: a first call containing a mistake and the engine error), rollout starts after it and the prefix turns are excluded from the loss.
+  If rep>0, each same-argument re-call right after an error is penalized by rep (re-calls inside the prefix are not counted). dev_cot monitors regression of tool-free solving (render 'cot')
+- If dev is given, every eval_every steps it solves greedily and records accuracy, structure-type accuracy and process score (for choosing checkpoints)
+- Rollouts run on two GPUs: the training model, and a generation-only subprocess (Roller) that receives the LoRA weights every step.
+  Processes are used instead of threads because fla's Triton autotuner is not thread-safe. Ending with Roller.close() also frees that GPU's memory
 """
 import os
 import queue
@@ -40,7 +40,7 @@ def prefix_calls(d: dict) -> int:
 
 
 def uses_process(d: dict, out: str) -> bool:
-    """과정 점수는 손풀이 구조 유형과 corr2cause 도구 인자에만 매긴다(causal_graph 도구 풀이에는 손풀이 줄이 없다)."""
+    """The process score applies only to hand-solved structure types and to corr2cause tool arguments (causal_graph tool solutions have no hand-solution lines)."""
     return d["query_type"] in STRUCT and ("call" in d["meta"] or "<tool_call>" not in out)
 
 
@@ -56,7 +56,7 @@ def lora_params(model) -> dict:
 
 @contextmanager
 def lora_off(model):
-    """LoRA 보정을 끈 기준 모델(SFT v2.1)."""
+    """Reference model (the SFT model with the LoRA correction disabled)."""
     mods = [m for m in model.modules() if isinstance(m, LoRALinear)]
     scales = [m.scale for m in mods]
     for m in mods:
@@ -67,7 +67,7 @@ def lora_off(model):
 
 
 def token_logps(model, ids: list[int], labels: list[int]) -> torch.Tensor:
-    """labels가 -100이 아닌 위치의 log π(토큰). 그 위치의 로짓만 계산한다(어휘 248k라 전체 로짓은 크다)."""
+    """log pi(token) at positions where labels != -100. Only the logits at those positions are computed (the vocabulary is 248k, so full logits are large)."""
     dev = model.device
     lab = torch.tensor(labels[1:], device=dev)
     pos = (lab != -100).nonzero().squeeze(1)
@@ -88,7 +88,7 @@ def _roll_worker(model_path: str, device: str, r: int, alpha: float, gen_batch: 
         try:
             job = inq.get(timeout=30)
         except queue.Empty:
-            if os.getppid() != parent:  # 부모(커널)가 비정상 종료되면 GPU 메모리를 들고 남지 않게 끝낸다
+            if os.getppid() != parent:  # if the parent (kernel) dies abnormally, exit so this process does not keep holding GPU memory
                 return
             continue
         if job is None:
@@ -101,7 +101,7 @@ def _roll_worker(model_path: str, device: str, r: int, alpha: float, gen_batch: 
 
 
 class Roller:
-    """다른 GPU의 생성 전용 사본(하위 프로세스). submit(LoRA 가중치, 프롬프트) → result()."""
+    """Generation-only copy on another GPU (subprocess). submit(LoRA weights, prompts) -> result()."""
 
     def __init__(self, model_path: str, device: str = "cuda:0", r: int = 16, alpha: float = 32.0, gen_batch: int = 64):
         ctx = mp.get_context("spawn")
@@ -115,7 +115,7 @@ class Roller:
             try:
                 return self.outq.get(timeout=60)
             except queue.Empty:
-                assert self.proc.is_alive(), f"Roller 프로세스가 죽었다(exit {self.proc.exitcode})"
+                assert self.proc.is_alive(), f"Roller process died (exit {self.proc.exitcode})"
 
     def submit(self, policy, prompts: list[str], **kw):
         self.inq.put(({n: p.detach().cpu() for n, p in lora_params(policy).items()}, prompts, kw))
@@ -129,7 +129,7 @@ class Roller:
 
 
 def rollout(policy, tok, roller, items: list[dict], group: int, gen_batch: int, do_sample: bool = True, mode: str = "tool", **kw) -> list[str]:
-    """문항마다 group개를 생성한다. roller가 있으면 앞 절반을 그쪽 GPU에서 동시에 돌린다. 'prefix'가 있는 문항은 그 뒤부터 생성한다."""
+    """Generate `group` samples per item. If a roller exists, the first half runs on its GPU concurrently. Items with a 'prefix' are generated from after the prefix."""
     kw |= {"do_sample": do_sample, "tools": mode == "tool"}
     prompts = [render(d, mode) for d in items for _ in range(group)]
     pre = [d.get("prefix", "") for d in items for _ in range(group)]
@@ -144,10 +144,10 @@ def train_grpo(policy, roller, tok, items: list[dict], steps: int = 60, prompts_
                beta: float = 0.02, temperature: float = 0.8, max_new_tokens: int = 2048, max_len: int = 6144, gen_batch: int = 64,
                ckpt_dir: Path | None = None, ckpt_every: int = 10, seed: int = 0, start: int = 0, proc: bool = False, kl_target: float | None = None,
                dev: list[dict] | None = None, rep: float = 0.0, dev_cot: list[dict] | None = None, cot_tokens: int = 8192, log=print) -> pd.DataFrame:
-    """policy: LoRA를 붙인 학습 모델. roller: 다른 GPU의 Roller(없으면 None). items: 보상을 줄 Gym 문항 풀.
-    start: 체크포인트(lora_step{start}.pt)를 불러온 뒤 이어 돌릴 때. 같은 문항 순서를 따르고, opt_step{start}.pt가 있으면 옵티마이저 상태와 β도 잇는다.
-    proc: 구조 유형 과정 점수 보상. kl_target: 적응형 β. dev: ckpt_every step마다(그리고 시작 전) greedy 평가할 문항('prefix'가 있는 문항은 dev_fix로 따로 낸다).
-    rep: 오류 뒤 같은 인자 재호출 벌점. dev_cot: 같은 때 도구 없이(cot, cot_tokens) 풀 문항."""
+    """policy: training model with LoRA attached. roller: Roller on another GPU (None if absent). items: pool of Gym items to reward.
+    start: when resuming after loading a checkpoint (lora_step{start}.pt). Follows the same item order and, if opt_step{start}.pt exists, restores optimizer state and beta too.
+    proc: structure-type process-score reward. kl_target: adaptive beta. dev: items evaluated greedily every ckpt_every steps (and before the start); items with a 'prefix' are passed separately as dev_fix.
+    rep: penalty for re-calling with the same arguments after an error. dev_cot: items solved at the same times without tools (cot, cot_tokens)."""
     rng, beta0 = np.random.default_rng(seed), beta
     params = list(lora_params(policy).values())
     opt = torch.optim.AdamW(params, lr=lr, weight_decay=0.0, betas=(0.9, 0.99))
@@ -191,7 +191,7 @@ def train_grpo(policy, roller, tok, items: list[dict], steps: int = 60, prompts_
         acc = np.array([reward(d, o) for d, o in zip((d for d in batch for _ in range(group)), outs)])
         adv = (r - r.mean(1, keepdims=True)) / (r.std(1, keepdims=True) + 1e-4)
         keep = [(i, j) for i in range(len(batch)) for j in range(group) if r[i].std() > 0]
-        def turns(d, out):  # 주어진 앞부분의 어시스턴트 턴은 문맥으로만 쓴다
+        def turns(d, out):  # assistant turns in the given prefix are used only as context
             ms, k = split_turns(out), prefix_calls(d)
             return [m | {"train": False} if m["role"] == "assistant" and n < 2 * k else m for n, m in enumerate(ms)]
 
@@ -234,7 +234,7 @@ def train_grpo(policy, roller, tok, items: list[dict], steps: int = 60, prompts_
 
 
 def load_lora(model, path: Path):
-    """lora_step*.pt를 LoRA를 붙인 모델에 불러온다."""
+    """Load lora_step*.pt into a model with LoRA attached."""
     sd = torch.load(path)
     mp = dict(model.named_parameters())
     with torch.no_grad():

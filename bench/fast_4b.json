@@ -1,0 +1,30 @@
+{
+ "model": "humm Fast 4B (single pass, temperature-calibrated)",
+ "sets": {
+  "cladder600": {
+   "n": 600,
+   "accuracy": 0.8433,
+   "ece": 0.0454
+  },
+  "corr2cause": {
+   "n": 1162,
+   "accuracy": 0.7969,
+   "ece": 0.0235
+  },
+  "gym3_test": {
+   "n": 520,
+   "accuracy": 0.9327,
+   "ece": 0.006
+  },
+  "caugym_yn": {
+   "n": 2500,
+   "accuracy": 0.7508,
+   "ece": 0.104
+  },
+  "calm_b": {
+   "n": 2300,
+   "accuracy": 0.7248,
+   "ece": 0.0898
+  }
+ }
+}

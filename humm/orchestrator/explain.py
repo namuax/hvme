@@ -1,4 +1,4 @@
-"""분석 결과 → 설명(마크다운). 숫자와 판정은 모두 엔진 결과에서 그대로 가져오고, LLM은 선택적으로 요약 문단만 쓴다."""
+"""Analysis result -> explanation (Markdown). All numbers and verdicts are taken verbatim from the engine results; the LLM optionally writes only a summary paragraph."""
 import json
 import re
 
@@ -76,7 +76,7 @@ def to_markdown(a: Analysis, validation: dict | None = None, narrative: str = ""
 
 
 def facts(a: Analysis) -> dict:
-    """LLM 요약에 넘기는 사실. 내부 이름(변수 id, 숨은 교란 _U)은 설명용 이름으로 바꾼다."""
+    """Facts passed to the LLM summary. Internal names (variable ids, hidden confounder _U) are replaced by display names."""
     s = a.sensitivity_summary
     return {"kind": KIND_KO[a.query.kind], "treatment": a.names.get(a.query.treatment, a.query.treatment),
             "outcome": a.names.get(a.query.outcome, a.query.outcome), "identification": STRATEGY_KO[a.estimand.strategy], "answer": verdict_line(a),
@@ -87,7 +87,7 @@ def facts(a: Analysis) -> dict:
 
 
 def _named(text: str, names: dict) -> str:
-    """문장 속 변수 id를 설명용 이름으로 바꾼다."""
+    """Replace variable ids in a sentence with display names."""
     for k in sorted(names, key=len, reverse=True):
         text = re.sub(rf"(?<![\w]){re.escape(k)}(?![\w])", names[k], text)
     return text
@@ -110,22 +110,22 @@ def _compose(cho: int, jung: int, jong: int) -> str:
 
 
 def _plain_word(word: str) -> str:
-    """합쇼체 어절 하나를 '~다'체로 바꾼다. 입니다→이다, 형용사 어간→어간+다, 동사 어간→ㄴ다/는다."""
+    """Convert one formal-polite (합쇼체) word to plain '~다' style: 입니다 -> 이다, adjective stem -> stem + 다, verb stem -> ㄴ다/는다."""
     if word.endswith("입니다"):
         return word[:-3] + "이다"
     if word.endswith("습니다"):
         stem = word[:-3]
-        tense = (_syllable(stem[-1]) or (0, 0, 0))[2] == 20  # ㅆ받침(았·었·했·겠): 나타났습니다 → 나타났다
+        tense = (_syllable(stem[-1]) or (0, 0, 0))[2] == 20  # ㅆ final consonant (았/었/했/겠): 나타났습니다 -> 나타났다
         return stem + ("다" if tense or any(stem.endswith(a) for a in ADJ_STEMS) else "는다")
     last = _syllable(word[-3]) if len(word) >= 3 and word.endswith("니다") else None
-    if last and last[2] == 17:  # ㅂ받침 + 니다: 증가합니다 → 증가한다, 큽니다 → 크다
+    if last and last[2] == 17:  # ㅂ final consonant + 니다: 증가합니다 -> 증가한다, 큽니다 -> 크다
         stem = word[:-3] + _compose(last[0], last[1], 0)
         return stem + "다" if any(stem.endswith(a) for a in ADJ_STEMS) else word[:-3] + _compose(last[0], last[1], 4) + "다"
     return word
 
 
 def to_plain(text: str) -> str:
-    """LLM 요약의 합쇼체 문장 끝을 '~다'체로 바꾼다(Qwen3.5는 지시해도 합쇼체로 쓰는 경우가 많다). '않습니다'는 앞 어절에 맞춘다."""
+    """Convert formal-polite sentence endings in the LLM summary to plain '~다' style (Qwen3.5 often writes formal-polite even when told not to). '않습니다' is matched to the preceding word."""
     def fix(m):
         before, word = m.group(1) or "", m.group(2)
         adj_neg = word.endswith("않습니다") and any(before.rstrip().removesuffix("지").endswith(a) for a in ADJ_STEMS)
@@ -134,14 +134,14 @@ def to_plain(text: str) -> str:
 
 
 def _plain(sentence: str) -> bool:
-    """'~다'체 평서문인가. '~습니다'·'~ㅂ니다'·'~요'는 아니다."""
+    """Is it a plain '~다' declarative sentence? '~습니다', '~ㅂ니다' and '~요' are not."""
     end = sentence.rstrip(".!?\"' )")
     return end.endswith("다") and not end.endswith("니다")
 
 
 def check_narrative(text: str, a: Analysis) -> list[str]:
-    """요약 문단 검사. 근거에 없는 소수, 합쇼체·해요체 문장, 내부 이름이 있으면 문제 목록을 돌려준다(빈 목록이면 통과).
-    의미 오류(구간을 효과로 읽기 등)는 잡지 못한다."""
+    """Check a summary paragraph. Returns a list of problems if it has numbers not in the evidence, formal-polite/해요 sentences, or internal names (an empty list means it passes).
+    Semantic errors (e.g. reading an interval as an effect) are not caught."""
     allowed = _numbers(json.dumps(facts(a), ensure_ascii=False)) | _numbers(verdict_line(a))
     sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+", text.strip()) if x.strip()]
     ids = {k for k, v in a.names.items() if k != v and re.search(rf"\b{re.escape(k)}\b", text)}
@@ -156,5 +156,5 @@ def narrate(a: Analysis, llm) -> str:
 
 
 def polish(draft: str) -> str:
-    """요약 원문 → 문체 정리본. 검사는 정리본에 한다."""
+    """Raw summary -> style-normalized version. The check is run on the normalized version."""
     return to_plain(draft)

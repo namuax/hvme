@@ -1,4 +1,4 @@
-"""기호 인과 엔진 교차 확인: 교과서 예제, 닫힌 해, DoWhy 결과와 비교한다."""
+"""Symbolic causal engine cross-checks: textbook examples, closed-form solutions and DoWhy results."""
 import logging
 
 import networkx as nx
@@ -8,13 +8,13 @@ import pytest
 from humm.engine import (BinarySCM, LinearSCM, adjustment_sets, d_separated, estimate, frontdoor_sets, identify, instruments,
                          is_frontdoor, is_valid_adjustment, local_markov, optimal_adjustment, refute)
 
-SMOKING = nx.DiGraph([("U", "S"), ("U", "C"), ("S", "T"), ("T", "C")])  # 흡연-타르-폐암, U 미관측
+SMOKING = nx.DiGraph([("U", "S"), ("U", "C"), ("S", "T"), ("T", "C")])  # smoking-tar-cancer, U unobserved
 CONFOUNDED = nx.DiGraph([("Z", "X"), ("Z", "Y"), ("X", "Y"), ("W", "Y")])
 IV = nx.DiGraph([("Z", "X"), ("U", "X"), ("U", "Y"), ("X", "Y")])
 M_BIAS = nx.DiGraph([("A", "X"), ("A", "M"), ("B", "M"), ("B", "Y"), ("X", "Y")])
 
 
-# ---------- d-분리 ----------
+# ---------- d-separation ----------
 def test_dsep_chain_fork_collider():
     assert d_separated(nx.DiGraph([("a", "b"), ("b", "c")]), "a", "c", "b")
     assert not d_separated(nx.DiGraph([("a", "b"), ("b", "c")]), "a", "c")
@@ -28,7 +28,7 @@ def test_local_markov():
     assert lm["c"] == ({"a"}, {"b"})
 
 
-# ---------- 식별 ----------
+# ---------- Identification ----------
 def test_backdoor_sets():
     assert is_valid_adjustment(CONFOUNDED, "X", "Y", {"Z"})
     assert not is_valid_adjustment(CONFOUNDED, "X", "Y", set())
@@ -37,7 +37,7 @@ def test_backdoor_sets():
 
 
 def test_m_bias_collider_not_adjusted():
-    # M은 충돌 변수이므로 M만 조정하면 편향이 생긴다. 빈 집합이 유효하다
+    # M is a collider, so adjusting only for M introduces bias. The empty set is valid
     assert is_valid_adjustment(M_BIAS, "X", "Y", set())
     assert not is_valid_adjustment(M_BIAS, "X", "Y", {"M"})
     assert is_valid_adjustment(M_BIAS, "X", "Y", {"M", "A"})
@@ -57,7 +57,7 @@ def test_identify_strategies():
     assert identify(CONFOUNDED, "Y", "X").strategy == "no_effect"
 
 
-# ---------- SCM과 반사실 ----------
+# ---------- SCM and counterfactuals ----------
 def simple_xy():
     return BinarySCM(nx.DiGraph([("X", "Y")]), {"X": np.array([0.4]), "Y": np.array([0.3, 0.8])})
 
@@ -67,7 +67,7 @@ def test_binary_scm_is_exact_on_small_graphs():
 
 
 def test_counterfactual_closed_forms():
-    s = simple_xy()  # 단조 문턱값 모형 + 외생 처치: PN = (p1-p0)/p1, PS = (p1-p0)/(1-p0), ETT = ATE
+    s = simple_xy()  # monotone threshold model + exogenous treatment: PN = (p1-p0)/p1, PS = (p1-p0)/(1-p0), ETT = ATE
     assert s.ate("X", "Y") == pytest.approx(0.5)
     assert s.pn("X", "Y") == pytest.approx(0.5 / 0.8)
     assert s.ps("X", "Y") == pytest.approx(0.5 / 0.7)
@@ -86,7 +86,7 @@ def test_linear_total_effect_is_path_sum():
     assert l.total_effect("X", "Y") == pytest.approx(7.0)
 
 
-# ---------- 추정: 데이터 추정치가 SCM 참값을 신뢰구간 안에 담는가 ----------
+# ---------- Estimation: does the data estimate's confidence interval contain the SCM truth ----------
 def covers(est, truth, slack=0.01):
     return est.ci[0] - slack <= truth <= est.ci[1] + slack
 
@@ -111,7 +111,7 @@ def test_refuters_pass_on_correct_model():
     assert refute(CONFOUNDED, s.sample(50_000, seed=4), "X", "Y").passed.all()
 
 
-# ---------- DoWhy 교차 확인 ----------
+# ---------- DoWhy cross-check ----------
 def test_matches_dowhy():
     dowhy = pytest.importorskip("dowhy")
     logging.disable(logging.WARNING)

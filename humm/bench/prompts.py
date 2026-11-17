@@ -1,4 +1,4 @@
-"""기준선 프롬프트. Noul(로짓) 방식은 답 토큰 하나만 읽고, CoT 방식은 CausalCoT(Jin et al., 2023) 단계를 따라 생성한다."""
+"""Baseline prompts. The Noul (logit) mode reads a single answer token; the CoT mode generates following the CausalCoT (Jin et al., 2023) steps."""
 
 NOUL_SUFFIX = "\n\nAnswer with Yes or No only."
 

@@ -21,7 +21,7 @@ def test_parse_tiers():
     text = 'think...\n```json\n{"tiers": [["a", "zz"], ["b", "a"], ["c"]]}\n```'
     assert parse_tiers(text, ["a", "b", "c"]) == [["a"], ["b"], ["c"]]
     assert parse_tiers("no json here", ["a"]) == []
-    draft = "Tier 1: a, b\nTier 2: c\n\nLet me revise.\nTier 1: **a**\nTier 2: b and c"  # JSON이 없으면 마지막 Tier 묶음을 읽는다
+    draft = "Tier 1: a, b\nTier 2: c\n\nLet me revise.\nTier 1: **a**\nTier 2: b and c"  # without JSON, read the last Tier group
     assert parse_tiers(draft, ["a", "b", "c"]) == [["a"], ["b", "c"]]
 
 
@@ -33,7 +33,7 @@ def test_knowledge_rules():
 
 def test_pc_finds_vstructure_and_meek(collider_data):
     g = pc(collider_data, alpha=0.01)
-    assert {("X", "Z"), ("Y", "Z")} <= g.directed and ("Z", "W") in g.directed  # v-구조 + Meek R1
+    assert {("X", "Z"), ("Y", "Z")} <= g.directed and ("Z", "W") in g.directed  # v-structure + Meek R1
     assert g.oriented_by[("X", "Z")] == "vstruct" and g.oriented_by[("Z", "W")] == "meek"
     assert graph_report(COLLIDER, to_dag(g))["shd"] == 0
 
@@ -46,13 +46,13 @@ def test_pc_is_column_order_invariant(collider_data):
 def test_knowledge_orients_markov_equivalent_chain():
     chain = nx.DiGraph([("A", "B"), ("B", "C")])
     df = BinarySCM(chain, {"A": np.array([0.5]), "B": np.array([0.2, 0.8]), "C": np.array([0.2, 0.8])}).sample(5000, seed=1)
-    assert pc(df).directed == set()  # 데이터만으로는 방향을 정할 수 없다
+    assert pc(df).directed == set()  # data alone cannot determine direction
     g = pc(df, knowledge=Knowledge(tiers=[["A"], ["B"], ["C"]]))
     assert g.directed == {("A", "B"), ("B", "C")} and g.oriented_by[("A", "B")] == "knowledge"
 
 
 def test_soft_mode_keeps_data_vstructure_against_wrong_prior(collider_data):
-    wrong = Knowledge(tiers=[["Z"], ["X", "Y", "W"]])  # 충돌 변수를 원인으로 놓은 틀린 사전지식
+    wrong = Knowledge(tiers=[["Z"], ["X", "Y", "W"]])  # wrong prior knowledge that puts the collider as a cause
     assert {("X", "Z"), ("Y", "Z")} <= pc(collider_data, knowledge=wrong, mode="soft").directed
     assert not {("X", "Z"), ("Y", "Z")} & pc(collider_data, knowledge=wrong, mode="hard").directed
 
@@ -79,10 +79,10 @@ def test_pipeline_outputs_hcg(collider_data):
     assert set(r.dag.edges) == set(COLLIDER.edges)
     assert all(any(x.method.startswith("pc:") for x in e.evidence) for e in r.hcg.edges)
     assert r.report.verdict == "pass"
-    assert r.hcg.edge("X", "Z").status == EdgeStatus.VERIFIED  # 데이터(v-구조)와 LLM 순서가 일치하고 그래프가 pass
+    assert r.hcg.edge("X", "Z").status == EdgeStatus.VERIFIED  # data (v-structure) and LLM ordering agree and the graph passes
     assert r.conflicts == []
     alone = tabular_to_hcg(collider_data, "demo", "toy", n_boot=0, validate_kw={"n_perm": 20})
-    assert alone.hcg.edge("X", "Z").status == EdgeStatus.HYPOTHESIS  # 데이터 증거뿐이면 승격하지 않는다
+    assert alone.hcg.edge("X", "Z").status == EdgeStatus.HYPOTHESIS  # not promoted with data evidence only
     wrong = tabular_to_hcg(collider_data, "demo", "toy", provider=NoisyOracle(COLLIDER.reverse(), 0.0), n_boot=0, validate_kw={"n_perm": 20})
     assert ("X", "Z", "vstruct") in wrong.conflicts
     assert set(profile(collider_data).kind) == {"binary"}
@@ -99,10 +99,10 @@ def test_hybrid_uses_only_confident_consensus(collider_data):
     from humm.graph.tabular import strong_knowledge
     a = pd.DataFrame([{"a": "X", "b": "Z", "p_ab": 0.99}, {"a": "W", "b": "Z", "p_ab": 0.97}])
     b = pd.DataFrame([{"a": "X", "b": "Z", "p_ab": 0.96}, {"a": "W", "b": "Z", "p_ab": 0.40}])
-    assert strong_knowledge([a, b], 0.95).forbidden == {("Z", "X")}  # 두 모델이 모두 확신한 쌍만
-    wrong = Knowledge(forbidden={("X", "Z"), ("Y", "Z")})  # 데이터의 v-구조를 뒤집는 확실한(틀린) 지식
+    assert strong_knowledge([a, b], 0.95).forbidden == {("Z", "X")}  # only pairs both models are confident about
+    wrong = Knowledge(forbidden={("X", "Z"), ("Y", "Z")})  # confident (wrong) knowledge that flips the data's v-structure
     assert ("Z", "X") in pc(collider_data, strong=wrong).directed
-    assert ("X", "Z") in pc(collider_data, knowledge=wrong).directed  # soft로만 주면 데이터가 이긴다
+    assert ("X", "Z") in pc(collider_data, knowledge=wrong).directed  # given only as soft knowledge, the data wins
 
 
 def test_default_mode_is_hybrid(collider_data):

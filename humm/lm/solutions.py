@@ -1,8 +1,8 @@
-"""풀이 템플릿 궤적: Humm-Gym 문항의 정답 풀이를 엔진 계산 과정 그대로 문장으로 쓴다 (Step 9 SFT 교사 데이터).
+"""Solution-template trajectories: write the correct solution of a Humm-Gym item as sentences that follow the engine's computation (SFT teacher data).
 
-Gym CoT 지시문의 단계(① 변수·그래프 정리 → ② 질의 유형 → ③ 추정식 → ④ 계산)를 따르고, 'Final answer: ...'로 끝낸다.
-숫자는 모두 문항의 확률표로 엔진이 계산한 값이다. 9B CoT가 약한 구조 추론형(corr2cause·identify·backadj)은
-rejection sampling으로 정답 궤적을 모으기 어려워 이 템플릿이 주 교사이다 (reports/2026-10-25_gym_baseline.md 4장).
+Follows the steps of the Gym CoT instruction (1 variables/graph -> 2 query type -> 3 estimand -> 4 computation) and ends with 'Final answer: ...'.
+Every number is computed by the engine from the item's probability table. For structure-reasoning types where 9B CoT is weak (corr2cause, identify, backadj),
+correct trajectories are hard to collect by rejection sampling, so this template is the main teacher.
 """
 import re
 from itertools import product
@@ -45,7 +45,7 @@ def _t(lang, ko, en):
 
 
 def jo(word: str, kind: str) -> str:
-    """조사만: jo('계절', '이') → '이'."""
+    """Particle only: jo('계절', '이') -> '이'."""
     return josa(word, kind)[len(word):]
 
 
@@ -54,7 +54,7 @@ def _p(x: float) -> str:
 
 
 class Writer:
-    """문항 하나의 풀이를 쓰는 도우미: 이름, 확률, 경로 표기."""
+    """Helper for writing the solution of one item: names, probabilities, path notation."""
 
     def __init__(self, d: dict):
         self.d, self.lang, self.meta = d, d["lang"], d["meta"]
@@ -74,11 +74,11 @@ class Writer:
         return self.lex.names(sorted(vs)) if vs else self.t("없음", "none")
 
     def set_(self, vs) -> str:
-        """집합 표기: {A, B} 또는 공집합 ∅."""
+        """Set notation: {A, B}, or the empty set."""
         return f"{{{self.lex.names(sorted(vs))}}}" if vs else "∅"
 
     def eq(self, assign: dict) -> str:
-        """'광고 집행=집행, 계절=비수기' 형식."""
+        """Format like 'ad=on, season=off'."""
         return ", ".join(f"{self.n(v)}={self.lex.state(v, x)}" for v, x in assign.items())
 
     def edges(self, g=None) -> str:
@@ -87,7 +87,7 @@ class Writer:
         return ", ".join(f"{self.n(u)} → {self.n(v)}" for u, v in es) or self.t("(엣지 없음)", "(no edges)")
 
     def path(self, p) -> str:
-        """경로를 화살표 방향과 함께: A → B ← C."""
+        """A path with arrow directions: A → B ← C."""
         out = self.n(p[0])
         for u, v in zip(p, p[1:]):
             out += f" → {self.n(v)}" if self.g.has_edge(u, v) else f" ← {self.n(v)}"
@@ -112,7 +112,7 @@ class Writer:
         return lines
 
     def target(self) -> list[str]:
-        """질문이 가리키는 변수(v2.1): 처치·결과를 잘못 읽는 오류(identify)를 줄이려고 그래프 다음에 먼저 적는다."""
+        """Variables the question refers to: written right after the graph to reduce errors of misreading treatment and outcome (identify)."""
         m, qt = self.meta, self.d["query_type"]
         if qt in ("identify", "backadj"):
             return [self.t(f"   질문의 처치는 {self.n(m['x'])}, 결과는 {self.n(m['y'])}이다.", f"   The question is about the treatment {self.n(m['x'])} and the outcome {self.n(m['y'])}.")]
@@ -126,9 +126,9 @@ class Writer:
         return "\n".join(lines + [f"Final answer: {target_text(self.d)}"])
 
 
-# ---------- 경로 분석 (d-분리) ----------
+# ---------- Path analysis (d-separation) ----------
 def describe_paths(w: Writer, g: nx.DiGraph, paths, z: set, limit: int = 6) -> tuple[list[str], bool]:
-    """경로마다 열림/막힘을 쓴다. 열린 경로를 먼저 보여 준다. (문장 목록, 열린 경로가 있는가)."""
+    """Write open/blocked status per path, showing open paths first. (list of sentences, whether an open path exists)."""
     status = [(p, blocked_by(g, p, z)) for p in paths]
     status.sort(key=lambda s: s[1] is not None)
     lines = []
@@ -142,9 +142,9 @@ def describe_paths(w: Writer, g: nx.DiGraph, paths, z: set, limit: int = 6) -> t
     return lines, any(b is None for _, b in status)
 
 
-# ---------- 수치 질의 ----------
+# ---------- Numeric queries ----------
 def _adjust_terms(w: Writer, x, y, z: list, xval: int) -> tuple[float, list[str]]:
-    """P(Y=1|do(X=x)) = Σ_z P(Y=1|X=x,z) P(z). (값, 항 설명)."""
+    """P(Y=1|do(X=x)) = Σ_z P(Y=1|X=x,z) P(z). (value, term description)."""
     total, parts = 0.0, []
     for bits in product((0, 1), repeat=len(z)):
         a = dict(zip(z, bits))
@@ -182,7 +182,7 @@ def sol_effect(w: Writer, kind: str) -> str:
 
 
 def _conclude(w: Writer, val: float, threshold: float) -> str:
-    """값과 질문 방향(높아지는가/낮아지는가)으로 예·아니오를 정한다."""
+    """Decide yes/no from the value and the question direction (increase / decrease)."""
     up = w.meta["direction"] == "up"
     holds = (val > threshold) == up
     rel = w.t("크다" if val > threshold else "작다", "greater" if val > threshold else "smaller")
@@ -284,7 +284,7 @@ def sol_mediation(w: Writer, kind: str) -> str:
     return w.final(lines)
 
 
-# ---------- 구조 질의 ----------
+# ---------- Structure queries ----------
 def sol_dsep(w: Writer) -> str:
     a, b, z = w.meta["a"], w.meta["b"], set(w.meta["z"])
     lines = w.head()
@@ -331,7 +331,7 @@ def sol_backadj(w: Writer) -> str:
 
 
 def adjustment_check(w: Writer, z: set) -> tuple[list[str], bool]:
-    """조정 집합 z의 유효성 점검 문장과 판정."""
+    """Validity-check sentences and verdict for adjustment set z."""
     x, y = w.meta["x"], w.meta["y"]
     bad = sorted(z & forbidden(w.g, x, y))
     lines = [w.t(f"   (i) 금지 노드와 겹치는 노드: {w.ns(bad) if bad else '없음'}.", f"   (i) Overlap with the forbidden nodes: {w.ns(bad) if bad else 'none'}.")]
@@ -343,7 +343,7 @@ def adjustment_check(w: Writer, z: set) -> tuple[list[str], bool]:
 
 
 def sol_methods(w: Writer) -> str:
-    """CLadder식 두 방법 비교: 방법 1의 조정 집합이 유효하고 방법 2는 유효하지 않을 때 '예'."""
+    """CLadder-style comparison of two methods: yes when method 1's adjustment set is valid and method 2's is not."""
     x, y, (m1, m2) = w.meta["x"], w.meta["y"], w.meta["methods"]
     lines = w.head(w.t(" 방법마다 조정 집합(나누어 보는 변수)이 유효한지 본다.", " Check whether each method's adjustment set (the variables it stratifies by) is valid."))
     lines.append(w.t(f"3) 판정 기준(일반화 조정 기준): 금지 노드(인과 경로 위 노드와 그 자손, {w.n(x)} 포함) = {{{w.ns(forbidden(w.g, x, y))}}}. "
@@ -435,7 +435,7 @@ def sol_corr2cause(w: Writer) -> str:
     es = lambda h: ", ".join(f"{nm(u)} → {nm(v)}" for u, v in sorted(h.edges, key=lambda e: (nm(e[0]), nm(e[1])))) or _t(lang, "(엣지 없음)", "(no edges)")
     skel = sorted({tuple(sorted((nm(u), nm(v)))) for u, v in g.edges})
     vs = sorted({(nm(a), nm(c), nm(b)) for c in g for a in g.predecessors(c) for b in g.predecessors(c) if nm(a) < nm(b) and not g.has_edge(a, b) and not g.has_edge(b, a)})
-    v33 = "call" in m  # Gym v3.3(SFT v2.3의 도구 없는 CoT판): 'via' 원 벤치 정의, 변수 6개까지 전수 열거
+    v33 = "call" in m  # tool-free CoT variant: the original benchmark's 'via' definition, exhaustive enumeration up to 6 variables
     members = mec_of(g) if v33 else mec(g)
     hyp = (re.search(r"(?:Hypothesis|가설): (.+?\.) ", w.d["question"])[1] if v33 else
            HYP[lang][m["hypothesis"]].format(a=nm(m["a"]), b=nm(m["b"]), i=josa(nm(m["a"]), "이")[1:], n=josa(nm(m["a"]), "은")[1:], w=josa(nm(m["a"]), "과")[1:]))
@@ -465,5 +465,5 @@ SOLVERS = {
 
 
 def solve(d: dict) -> str:
-    """문항 하나의 풀이 궤적. 문항에 meta['vocab']이 있어야 한다(Gym v2, corr2cause는 meta['names'])."""
+    """Solution trajectory for one item. The item must have meta['vocab'] (for corr2cause, meta['names'])."""
     return SOLVERS[d["query_type"]](Writer(d))

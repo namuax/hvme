@@ -1,34 +1,34 @@
-"""Humm-Gym v3 생성기 (Step 9 SFT v2): 문형 다양화·처치/결과 전환·CLadder식 확률 문맥·결정론적 반사실.
+"""Humm-Gym v3 generator: template diversification, treatment/outcome switching, CLadder-style probability contexts, deterministic counterfactuals.
 
-SFT 1차는 유형마다 문형이 하나뿐이라 모델이 문형으로 질의 유형을 외웠다(reports/2026-10-28_humm_lm_sft.md 3장). v3는
-- 질의 유형마다 한국어·영어 문형을 여러 개 두고, 처치 상태(t)와 결과 상태(o)를 무작위로 뒤집는다.
-- 수치 질의 문맥의 절반은 전체 확률표 대신 질의에 필요한 관측 확률(주변·결합·조건부)만 준다. 이때 정답 계산에 쓸
-  causal_engine 호출 인자(meta.call)를 문맥과 같은 숫자로 만들고, 도구 값이 참값과 맞는 경우에만 이 문맥을 쓴다.
-- 결정론적 반사실(det_cf)을 추가한다.
+The first generator had a single template per type, so models memorized query types from the template. v3:
+- Provides several Korean and English templates per query type and randomly flips the treatment state (t) and outcome state (o).
+- For half of the numeric-query contexts, gives only the observed probabilities the query needs (marginal, joint, conditional) instead of the full table. The
+  causal_engine call arguments (meta.call) are built from the same numbers as the context, and this context is used only if the tool value matches the true value.
+- Adds deterministic counterfactuals (det_cf).
 
-수치 질의의 값은 모두 '처치 세계 − 기준 세계'(humm.lm.tools.evaluate)이고, meta.q에 엔진 질의를 비트로 남겨 check가 재계산한다.
+All numeric-query values are 'treated world - baseline world' (humm.lm.tools.evaluate), and the engine query is stored bit-exactly in meta.q so check can recompute it.
 
-v3.1(SFT v2.1, GENERATORS_31): SFT v2는 CLadder 문장을 도구 인자로 옮기지 못했다(reports/2026-10-28_humm_lm_sft_v2.md 3.2).
-영어 수치 질의와 det_cf 일부를 CLadder식 표면(style "bare")으로 쓴다: 무의미 변수명, 상태 이름 없는 'kwox / not kwox',
-'The probability of not kwox and kwoz is 5%.' 결합 문형, 'For those who are …' 조건부 문형, 'We know that … causes …' 규칙.
-도구 인자에서는 kwox=yes / kwox=no로 쓴다. CLadder 문항 자체는 쓰지 않는다.
+v3.1 (GENERATORS_31): models could not translate CLadder sentences into tool arguments.
+Some English numeric queries and det_cf items use a CLadder-style surface (style "bare"): meaningless variable names, stateless 'kwox / not kwox',
+the joint form 'The probability of not kwox and kwoz is 5%.', the conditional form 'For those who are ...', and the rule form 'We know that ... causes ...'.
+Tool arguments use kwox=yes / kwox=no. CLadder items themselves are not used.
 
-v3.2(GENERATORS_32): SFT v2.1은 'would having a sister positively affect heart condition?'처럼 상태 없이 변수 이름만 쓴 질문에서
-결과 상태를 잘못 골랐다(reports/2026-10-29_humm_lm_sft_v21.md 4절). ate·nde·nie 일반 문항 일부를 이 문형(form "named")으로 쓴다.
-확률 문장이 늘 상태 1을 다루므로 상태 없는 이름은 상태 1을 뜻하고, 이때 처치·결과는 t = o = 1이다.
+v3.2 (GENERATORS_32): models picked the wrong outcome state for questions that name only variables without states, such as 'would having a sister positively affect heart condition?'.
+Some general ate, nde and nie items use this form (form "named").
+Probability sentences always concern state 1, so a stateless name means state 1, and then t = o = 1.
 
-v3.3(GENERATORS_33): v2.1은 Corr2Cause 원 벤치(변수 5–6개가 89%)에서 동치류를 손으로 나열하다 틀렸다(reports/2026-10-31_corr2cause_analysis.md).
-corr2cause를 변수 3–6개(5–6개 60%)로 늘리고, 원 벤치처럼 모든 상관·조건부 독립 관계를 나열하며, 가설 'via'를 원 벤치 정의(중간 변수를 거치는 경로)로 쓴다.
-정답은 humm.engine.discovery로 계산하고, 풀이는 causal_discovery 도구 호출(meta.call)이다.
+v3.3 (GENERATORS_33): on the original Corr2Cause benchmark (89% have 5-6 variables), models erred when enumerating equivalence classes by hand.
+corr2cause is extended to 3-6 variables (60% with 5-6), lists all correlation and conditional-independence relations as the original benchmark does, and defines the hypothesis 'via' as in the original (a path through intermediate variables).
+Answers are computed with humm.engine.discovery, and the solution is a causal_discovery tool call (meta.call).
 
-v3.5(GENERATORS_35): v2.6은 CLadder의 상태 없는 nie·nde 질문에서 처치를 거꾸로 골랐다(reports/2026-11-02_humm_lm_sft_v26.md).
-v3.2 named는 처치가 늘 '높음·있음' 같은 두드러진 상태라 모델이 상태 이름으로 처치를 골랐다. CLadder의 처치(X=1)는 조건부 확률 문장에서
-기준 다음에 나오는 상태이고 Gym도 같은 순서로 쓴다. named 문항의 절반은 처치 변수의 두 상태 이름을 맞바꿔(flip) 순서만 단서로 남긴다.
-있음/없음류 상태(yes, on, taken, done)는 CLadder에서도 늘 있음 쪽이 X=1이므로 맞바꾸지 않는다.
+v3.5 (GENERATORS_35): models picked the treatment backwards on CLadder's stateless nie and nde questions.
+In v3.2 named, the treatment was always a salient state such as 'high' or 'present', so models chose it by state name. CLadder's treatment (X=1) is the state that comes after the baseline in conditional-probability sentences,
+and the Gym writes them in the same order. Half of the named items swap (flip) the two state names of the treatment variable so that only the order remains as a cue.
+Present/absent-type states (yes, on, taken, done) are not swapped, since in CLadder the present side is always X=1.
 
-v3.6(GENERATORS_36): v2.8은 CLadder exp_away(설명 효과)를 0.25만 맞혔다(reports/2026-11-05_humm_lm_sft_v211.md). 엔진·Gym에 이 유형이 없어
-공통 결과로 거르지 않은 correlation이나 ate를 불렀다(값 +0.0000). exp_away는 X → C ← Y에서 C=c인 경우만 볼 때 X에 따라 Y가 달라지는지 묻는다.
-엔진 질의는 correlation에 관측 조건 given = {C: c}를 붙인 것이다. CLadder처럼 P(X)와 P(Y | X, C) 넷을 준다.
+v3.6 (GENERATORS_36): models solved CLadder exp_away (explaining away) only 25% of the time. Neither the engine nor the Gym had this type, so
+they called correlation or ate without conditioning on the collider (value +0.0000). exp_away asks, for X -> C <- Y and looking only at C=c, whether Y varies with X.
+The engine query is correlation with the observed condition given = {C: c}. As in CLadder, P(X) and the four P(Y | X, C) values are given.
 """
 from itertools import combinations
 
@@ -50,7 +50,7 @@ def _pct(p):
 
 
 def statement(lex, target: dict, given: dict, p: float, style: str) -> str:
-    """확률 문장 하나. style: gym(기존 문체) | cl(CLadder식 문체)."""
+    """One probability sentence. style: gym (original wording) | cl (CLadder wording)."""
     if lex.lang == "ko":
         tgt = "이고 ".join(lex.is_(v, x) for v, x in target.items())
         if given:
@@ -63,7 +63,7 @@ def statement(lex, target: dict, given: dict, p: float, style: str) -> str:
 
 
 def prob_str(lex, target: dict, given: dict, p: float) -> str:
-    """도구 인자용: 'P(매출=높음 | 광고 집행=집행) = 0.30'."""
+    """For tool arguments: 'P(매출=높음 | 광고 집행=집행) = 0.30'."""
     eq = lambda a: ", ".join(f"{lex.name(v)}={lex.state(v, x)}" for v, x in a.items())
     return f"P({eq(target)}{' | ' + eq(given) if given else ''}) = {round(p * 100) / 100:.2f}"
 
@@ -80,7 +80,7 @@ def cpt_statements(scm: BinarySCM) -> list[tuple[dict, dict]]:
 
 
 def min_statements(qtype: str, g: nx.DiGraph, c: dict):
-    """질의에 필요한 관측 확률만(CLadder식). 해당 구조가 아니면 None."""
+    """Only the observed probabilities the query needs (CLadder-style). None if the structure does not apply."""
     x, y = c.get("x"), c["y"]
     yx = lambda z: [({y: 1}, {x: a, **dict(zip(z, bits))}) for a in (0, 1) for bits in np.ndindex(*(2,) * len(z))]
     if qtype == "marginal":
@@ -102,7 +102,7 @@ def min_statements(qtype: str, g: nx.DiGraph, c: dict):
 
 
 def make_call(lex, g, scm, stmts, q) -> dict:
-    """문맥 확률 문장과 같은 숫자로 causal_engine 호출 인자를 만든다."""
+    """Build causal_engine call arguments from the same numbers as the context probability sentences."""
     st = lambda d: {lex.name(v): lex.state(v, x) for v, x in d.items()}
     call = {"variables": {lex.name(v): [lex.state(v, 1), lex.state(v, 0)] for v in sorted(g.nodes)},
             "graph": [f"{lex.name(u)} -> {lex.name(v)}" for u, v in sorted(g.edges)],
@@ -115,7 +115,7 @@ def make_call(lex, g, scm, stmts, q) -> dict:
     return call
 
 
-# ---------- 문형 ----------
+# ---------- Templates ----------
 def _ctx(lex, c, t, o):
     x, y = c.get("x"), c["y"]
     d = {"Y": lex.name(y), "yo": lex.is_(y, o), "yn": lex.is_(y, 1 - o)}
@@ -129,7 +129,7 @@ def _ctx(lex, c, t, o):
 
 
 def _ko(d):
-    """한국어 조사가 붙은 조각."""
+    """Fragments with Korean particles attached."""
     return d | {k + "_을": josa(d[k], "을") for k in ("X", "M") if k in d} | {k + "_이": josa(d[k], "이") for k in ("X", "M") if k in d} | \
         ({"t_로": _q(d["t"]), "b_로": _q(d["b"]), "t_였": _was(d["t"]), "b_였": _was(d["b"])} if "t" in d else {})
 
@@ -206,9 +206,9 @@ SETUPS = {
 RUNG = {"marginal": 1, "correlation": 1, "ate": 2, "cde": 2, "ett": 3, "nde": 3, "nie": 3}
 
 
-# ---------- CLadder식 표면 (v3.1) ----------
+# ---------- CLadder-style surface ----------
 class Bare(Lexicon):
-    """무의미 변수: 문장에서는 'kwox' / 'not kwox', 도구 인자 상태는 yes/no."""
+    """Meaningless variables: 'kwox' / 'not kwox' in sentences, yes/no states in tool arguments."""
 
     def is_(self, v, val):
         return self.name(v) if val else f"not {self.name(v)}"
@@ -218,11 +218,11 @@ def bare_lex(g, rng) -> Bare:
     names = set()
     while len(names) < g.number_of_nodes():
         names.add("".join(rng.choice(list(a)) for a in ("bcdfghjklmnprstvxyz", "wwrl", "aeiouy", "bcdfghjklmnpqrstvxz")))
-    return Bare({v: (n, "예", "아니오", n, "yes", "no") for v, n in zip(sorted(g.nodes), sorted(sorted(names), key=lambda _: rng.random()))}, "en")  # 집합 순서(해시)에 기대지 않게 먼저 정렬
+    return Bare({v: (n, "예", "아니오", n, "yes", "no") for v, n in zip(sorted(g.nodes), sorted(sorted(names), key=lambda _: rng.random()))}, "en")  # sort first so as not to depend on set (hash) order
 
 
 def _graph_text(g, lex) -> list[str]:
-    """CLadder처럼 문장 첫 글자는 대문자(Kwox has a direct effect on swoq.)."""
+    """As in CLadder, the first letter of a sentence is capitalized (Kwox has a direct effect on swoq.)."""
     return [t[0].upper() + t[1:] for t in describe_graph(g, lex)] if isinstance(lex, Bare) else describe_graph(g, lex)
 
 
@@ -243,7 +243,7 @@ BARE_PHRASES = {
 }
 
 
-NAMED_PHRASES = {  # 처치·결과를 상태 없이 이름만 쓴다(CLadder 'affect heart condition')
+NAMED_PHRASES = {  # treatment and outcome are named without states (CLadder 'affect heart condition')
     "ate": {"ko": lambda d, up: f"{d['X_이']} {d['Y']}에 {'양(+)' if up else '음(−)'}의 인과 효과를 주는가?",
             "en": lambda d, up: f"Does {d['X']} have a {'positive' if up else 'negative'} causal effect on {d['Y']}?"},
     "nde": {"ko": lambda d, up: f"{d['M_을']} 통한 매개 효과를 무시하면, {d['X_이']} {d['Y']}에 {'양(+)' if up else '음(−)'}의 영향을 주는가?",
@@ -259,7 +259,7 @@ def numeric(qtype, rng, lang, domain, bare: float = 0.0, named: float = 0.0, dig
         return None
     t = 1 if qtype in ("nde", "nie") and rng.random() < 0.5 else int(rng.integers(2))
     o = int(rng.integers(2))
-    named_ = bool(named) and qtype in NAMED_PHRASES and rng.random() < named  # named = 0이면 v3.1과 같은 난수 흐름
+    named_ = bool(named) and qtype in NAMED_PHRASES and rng.random() < named  # if named = 0 the random stream matches v3.1
     t, o = (1, 1) if named_ else (t, o)
     q = {"query": "correlation" if qtype == "exp_away" else qtype, "outcome": {c["y"]: o}}
     q |= {"treatment": {c["x"]: t}, "baseline": {c["x"]: 1 - t}} if qtype != "marginal" else {}
@@ -273,14 +273,14 @@ def numeric(qtype, rng, lang, domain, bare: float = 0.0, named: float = 0.0, dig
         return None
     bare_ = bool(bare) and lang == "en" and qtype in BARE_PHRASES and rng.random() < bare
     lex = bare_lex(c["g"], rng) if bare_ else _lex(c["g"], rng, lang, domain)
-    if digits and not bare_ and rng.random() < digits:  # v3.4: 학습 도메인 이름에 상태 1/0(테스트 무의미 이름의 상태 표기)
+    if digits and not bare_ and rng.random() < digits:  # states 1/0 on training-domain names (the state notation of meaningless test names)
         lex = Lexicon({v: (w[0], "1", "0", w[3], "1", "0") for v, w in lex.vocab.items()}, lang)
-    if flip and named_ and not bare_ and lex.vocab[c["x"]][4] not in PRESENT and rng.random() < flip:  # v3.5: 처치 변수의 상태 1이 두드러지지 않은 쪽(낮음·느림)이 되게 맞바꾼다
+    if flip and named_ and not bare_ and lex.vocab[c["x"]][4] not in PRESENT and rng.random() < flip:  # swap so that state 1 of the treatment variable is the non-salient side (low, slow)
         w = lex.vocab[c["x"]]
         lex = Lexicon(lex.vocab | {c["x"]: (w[0], w[2], w[1], w[3], w[5], w[4])}, lang)
     stmts, style = min_statements(qtype, c["g"], c) if rng.random() < 0.5 or bare_ else None, "cl" if rng.random() < 0.5 else "gym"
     style = "bare" if bare_ else style
-    named_ = named_ and not bare_  # bare 이름은 원래 상태 1이다
+    named_ = named_ and not bare_  # bare names are state 1 by definition
     call = None
     if stmts:
         call = make_call(lex, c["g"], scm, stmts, q)
@@ -306,10 +306,10 @@ def numeric(qtype, rng, lang, domain, bare: float = 0.0, named: float = 0.0, dig
     meta = {k2: v for k2, v in c.items() if k2 != "g"} | {"direction": "up" if up else "down", "cpt": _cpt(scm), "vocab": lex.vocab, "q": q,
                                                           "call": call, "style": style, "minimal": stmts is not None and len(stmts) < len(cpt_statements(scm)),
                                                           "form": k} | ({"sents": sents} if bare_ else {})
-    return Item(qtype, RUNG.get(qtype, 1), "noul", lang, domain, text, question, int(want), value=round(val, 6), graph=list(c["g"].edges), meta=meta)  # exp_away(v3.6)는 RUNG에 없고 Rung 1이다
+    return Item(qtype, RUNG.get(qtype, 1), "noul", lang, domain, text, question, int(want), value=round(val, 6), graph=list(c["g"].edges), meta=meta)  # exp_away is not in RUNG and is Rung 1
 
 
-# ---------- 구조 질의 문형 ----------
+# ---------- Structural-query templates ----------
 def gen_dsep(rng, lang, domain):
     it = Q.gen_dsep(rng, lang, domain)
     if it is None or rng.random() < 0.5:
@@ -331,7 +331,7 @@ def _lex_of(it):
 
 
 def gen_backadj(rng, lang, domain):
-    """절반은 기존 문형, 절반은 CLadder식 두 방법 비교(유효한 조정 집합 하나와 유효하지 않은 집합 하나)."""
+    """Half use the original templates, half a CLadder-style comparison of two methods (one valid adjustment set and one invalid set)."""
     if rng.random() < 0.5:
         return Q.gen_backadj(rng, lang, domain)
     for _ in range(40):
@@ -359,9 +359,9 @@ def gen_backadj(rng, lang, domain):
                 meta={"x": x, "y": y, "z": m1, "methods": [m1, m2], "vocab": lex.vocab})
 
 
-# ---------- 결정론적 반사실 ----------
+# ---------- Deterministic counterfactuals ----------
 def det_rule_text(lex, v, rule) -> str:
-    """rule = (op, [(parent, value), ...]): v=1 iff 리터럴들이 op(and/or)로 성립."""
+    """rule = (op, [(parent, value), ...]): v=1 iff the literals combined by op (and/or) hold."""
     op, lits = rule
     if lex.lang == "ko":
         cond = ("이고 " if op == "and" else "이거나 ").join(lex.is_(p, a) for p, a in lits)
@@ -385,7 +385,7 @@ def det_values(order, rules, exo: dict, do: dict | None = None) -> dict:
 
 
 def bare_rule_text(lex, v, rule) -> str:
-    """CLadder식 규칙: 'gyzp and not hwax causes jyka', 부정 리터럴 하나는 'tijv causes not gyzp'."""
+    """CLadder-style rules: 'gyzp and not hwax causes jyka'; a single negated literal is 'tijv causes not gyzp'."""
     op, lits = rule
     if len(lits) == 1 and not lits[0][1]:
         return f"{lex.name(lits[0][0])} causes not {lex.name(v)}"
@@ -402,7 +402,7 @@ def gen_det_cf(rng, lang, domain, bare: float = 0.0):
         x, y = pairs[rng.integers(len(pairs))]
         fact = det_values(order, rules, exo)
         cf = det_values(order, rules, exo, {x: 1 - fact[x]})
-        if cf[y] != fact[y] or rng.random() < 0.4:  # 반사실 값이 사실과 같은 문항도 일부 남긴다
+        if cf[y] != fact[y] or rng.random() < 0.4:  # keep some items whose counterfactual value equals the fact
             break
     else:
         return None
@@ -430,8 +430,8 @@ def gen_det_cf(rng, lang, domain, bare: float = 0.0):
                       "fact": fact, "vocab": lex.vocab, "style": "bare" if bare_ else "plain"})
 
 
-# ---------- v3.3 corr2cause: 원 벤치 표면, 변수 3–6개, causal_discovery 도구 ----------
-C2C_N, C2C_P, C2C_MAX_MEC, C2C_MAX_REL = (3, 4, 5, 6), (0.15, 0.25, 0.3, 0.3), 32, 60  # 원 벤치는 동치류 최대 32개, 관계 최대 52개다
+# ---------- corr2cause: original-benchmark surface, 3-6 variables, causal_discovery tool ----------
+C2C_N, C2C_P, C2C_MAX_MEC, C2C_MAX_REL = (3, 4, 5, 6), (0.15, 0.25, 0.3, 0.3), 32, 60  # the original benchmark has at most 32 equivalence classes and 52 relations
 HYP33 = {
     "ko": {"direct": ["{a}{i} {b}의 직접 원인이다."], "via": ["{a}{n} 다른 변수를 거쳐 {b}의 원인이 된다.", "{a}에서 다른 변수를 거쳐 {b}{r} 가는 인과 경로가 있다."],
            "cause": ["{a}{n} {b}의 (직접 또는 간접) 원인이다."], "collider": ["{a}{w} {b}의 공통 결과(충돌 변수)가 적어도 하나 있다."],
@@ -447,7 +447,7 @@ def _and(xs: list[str]) -> str:
 
 
 def c2c_relations(g: nx.DiGraph, lang: str) -> tuple[list[str], list[str]]:
-    """원 벤치처럼 쌍마다 주변 관계와, 그 쌍을 떼어 놓는 모든 조건 집합을 쓴다. (상관 문장, 독립 문장)."""
+    """As in the original benchmark, for each pair write the marginal relation and every conditioning set that separates the pair. Returns (dependence sentences, independence sentences)."""
     nodes, dep, ind = sorted(g), [], []
     for u, v in combinations(nodes, 2):
         pair = f"{josa(u, '과')} {josa(v, '은')}"
@@ -463,13 +463,13 @@ def c2c_relations(g: nx.DiGraph, lang: str) -> tuple[list[str], list[str]]:
 
 
 def gen_corr2cause(rng, lang, domain):
-    """정답 '참'과 '거짓' 가설을 동치류에서 전수 계산한 뒤 원하는 쪽에서 고른다(50:50)."""
+    """Enumerate all true and false hypotheses from the equivalence classes, then pick from the desired side (50:50)."""
     want = bool(rng.random() < 0.5)
     pool = "PQRSTUVWXYZ" if domain in Q.TEST_DOMAINS else "ABCDEFGHJKLMN"
     for _ in range(40):
         n = int(rng.choice(C2C_N, p=C2C_P))
         g = random_dag(n, rng, p=float(rng.uniform(0.3, 0.8)), max_parents=3, connected=bool(rng.random() < 0.8))
-        g = nx.relabel_nodes(g, dict(zip(sorted(g), _pick(rng, list(pool), n))))  # 이름 순서가 위상 순서를 드러내지 않게 무작위로 붙인다
+        g = nx.relabel_nodes(g, dict(zip(sorted(g), _pick(rng, list(pool), n))))  # assign names randomly so that name order does not reveal the topological order
         members = mec_of(g)
         cands = [(h, a, b) for h in HYP33["en"] for a in g for b in g if a != b and all(holds(h, m, a, b) for m in members) == want]
         dep, ind = c2c_relations(g, lang)
@@ -500,18 +500,18 @@ GENERATORS = {**{k: (lambda k: lambda rng, lang, domain: numeric(k, rng, lang, d
 MIX = {"ate": 0.11, "nie": 0.09, "nde": 0.08, "ett": 0.11, "cde": 0.05, "correlation": 0.08, "marginal": 0.06, "ate_score": 0.03,
        "backadj": 0.10, "dsep": 0.06, "identify": 0.07, "corr2cause": 0.06, "det_cf": 0.10}
 
-BARE = 0.5  # v3.1: 영어 수치 질의(cde·ate_score 제외)와 det_cf 중 CLadder식 표면 비율
+BARE = 0.5  # fraction of English numeric queries (excluding cde, ate_score) and det_cf items with the CLadder-style surface
 GENERATORS_31 = GENERATORS | {k: (lambda k: lambda rng, lang, domain: numeric(k, rng, lang, domain, bare=BARE))(k) for k in BARE_PHRASES} | \
     {"det_cf": lambda rng, lang, domain: gen_det_cf(rng, lang, domain, bare=BARE)}
-NAMED = 0.25  # v3.2: ate·nde·nie 일반 문항 중 상태 없는 이름 문형 비율
+NAMED = 0.25  # fraction of general ate/nde/nie items with stateless-name templates
 GENERATORS_32 = GENERATORS_31 | {k: (lambda k: lambda rng, lang, domain: numeric(k, rng, lang, domain, bare=BARE, named=NAMED))(k) for k in NAMED_PHRASES}
 GENERATORS_33 = GENERATORS_32 | {"corr2cause": gen_corr2cause}
-DIGITS = 1.0  # v3.4: 수치 질의 전부를 상태 1/0으로(학습 보충용, 다른 유형은 v3.3과 같다)
+DIGITS = 1.0  # all numeric queries use states 1/0 (for training supplements; other types as in v3.3)
 GENERATORS_34 = GENERATORS_33 | {k: (lambda k: lambda rng, lang, domain: numeric(k, rng, lang, domain, bare=BARE, named=NAMED, digits=DIGITS))(k) for k in RUNG}
-PRESENT = ("yes", "on", "taken", "done", "1")  # v3.5: 맞바꾸지 않는 있음/없음류·1/0 상태 1
-FLIP = 0.5  # v3.5: named 문항(ate·nde·nie만, 학습 보충용) 중 처치 상태 이름을 맞바꾼 비율
+PRESENT = ("yes", "on", "taken", "done", "1")  # state 1 of present/absent-type and 1/0 states, which are not swapped
+FLIP = 0.5  # fraction of named items (ate, nde, nie only; for training supplements) with swapped treatment state names
 GENERATORS_35 = GENERATORS_33 | {k: (lambda k: lambda rng, lang, domain: numeric(k, rng, lang, domain, named=1.0, flip=FLIP))(k) for k in NAMED_PHRASES}
-# v3.6 exp_away는 이전 버전 생성기(BARE_PHRASES로 만든 GENERATORS_31~35)에 들어가지 않게 여기서 더한다. RUNG(수치 유형 목록으로도 쓴다)에는 넣지 않는다
+# exp_away is added here so it stays out of the earlier generators (GENERATORS_31-35, built from BARE_PHRASES). It is not added to RUNG (also used as the list of numeric types)
 BARE_PHRASES["exp_away"] = lambda d, up: f"If we look at those who are {d['cv']}, does the chance of {d['yo']} {'increase' if up else 'decrease'} when {d['xt']}?"
-EXP_AWAY = 0.5  # v3.6: exp_away 영어 문항 중 CLadder식 표면 비율(다른 유형은 v3.5와 같다)
+EXP_AWAY = 0.5  # fraction of English exp_away items with the CLadder-style surface (other types as in v3.5)
 GENERATORS_36 = GENERATORS_35 | {"exp_away": lambda rng, lang, domain: numeric("exp_away", rng, lang, domain, bare=EXP_AWAY)}

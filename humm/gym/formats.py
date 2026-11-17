@@ -1,8 +1,8 @@
-"""Humm-Gym 문항을 모델 입력으로 바꾸고, 모델 출력을 채점한다.
+"""Convert Humm-Gym items to model inputs and grade model outputs.
 
-mode="direct": 답 토큰 하나만 읽는 형식(Humm-Fast의 Noul·Choice·Score, option_probs 평가)
-mode="cot":    단계별 풀이 후 'Final answer: ...' 로 끝내는 형식(Humm-LM SFT·GRPO, 생성형 평가)
-mode="tool":   cot와 같되 수치 계산은 causal_engine 도구 호출로 한다(Humm-LM SFT v2, humm.lm.tools)
+mode="direct": read a single answer token (Humm-Fast Noul/Choice/Score, option_probs evaluation)
+mode="cot":    step-by-step solution ending with 'Final answer: ...' (Humm-LM SFT/GRPO, generative evaluation)
+mode="tool":   like cot, but numeric computation goes through causal_engine tool calls (Humm-LM SFT, humm.lm.tools)
 """
 import json
 import re
@@ -15,7 +15,7 @@ DIRECT = {
     ("score", "ko"): "단계 번호 하나로만 답하라.", ("score", "en"): "Answer with the level number only.",
 }
 FINAL_FORMAT = {"noul": "yes 또는 no|yes or no", "choice": "보기 알파벳|the option letter", "score": "단계 번호|the level number",
-                "prob": "위에서 요청한 답 형식|the answer format asked for above"}  # prob(v3.7): 값을 JSON으로 묻는 문항
+                "prob": "위에서 요청한 답 형식|the answer format asked for above"}  # prob: items asking for a value as JSON
 COT = {
     "ko": "단계별로 풀어라. (1) 변수와 인과 그래프를 정리하고, (2) 질의 유형을 판단하고, (3) 필요한 추정식을 세우고, (4) 주어진 확률로 계산한 뒤 답하라. "
           "마지막 줄은 반드시 'Final answer: <{fmt}>' 형식으로 쓴다.",
@@ -46,19 +46,19 @@ def render(item: dict, mode: str = "direct") -> str:
 
 
 def option_labels(item: dict) -> list[str]:
-    """direct 모드에서 확률을 읽을 답 토큰. noul은 [참, 거짓] 순서이다."""
+    """Answer tokens whose probabilities are read in direct mode. For noul the order is [true, false]."""
     return {"noul": ["예", "아니오"] if item["lang"] == "ko" else ["Yes", "No"],
             "choice": list(LETTERS[: len(item["options"])]),
             "score": [str(i + 1) for i in range(len(item["options"]))]}[item["kind"]]
 
 
 def target_index(item: dict) -> int:
-    """option_labels 안에서 정답의 위치."""
+    """Position of the correct answer within option_labels."""
     return {"noul": 1 - item["label"], "choice": item["label"], "score": item["label"] - 1}[item["kind"]]
 
 
 def target_text(item: dict) -> str:
-    """cot 모드에서 'Final answer:' 뒤에 와야 할 정답."""
+    """The answer expected after 'Final answer:' in cot mode."""
     if item["kind"] == "prob":
         return json.dumps(item["meta"]["answer"])
     return {"noul": "yes" if item["label"] else "no", "choice": LETTERS[item["label"]], "score": str(item["label"])}[item["kind"]]
@@ -78,7 +78,7 @@ JSON_PROB = re.compile(r'"PROB"\s*:\s*"?\s*(-?[0-9]*\.?[0-9]+)', re.I)
 
 
 def prob_correct(item: dict, text: str) -> bool:
-    """prob 문항: 마지막 'Final answer:' 뒤 JSON의 PROB가 정답과 0.0005 안이고, 예/아니오를 물으면 ANSWER도 같다."""
+    """prob items: the PROB in the JSON after the last 'Final answer:' is within 0.0005 of the answer, and ANSWER matches too if yes/no is asked."""
     i = text.lower().rfind("final answer:")
     tail = text[i:] if i >= 0 else text
     p, a = JSON_PROB.findall(tail), JSON_ANSWER.findall(tail)
@@ -87,5 +87,5 @@ def prob_correct(item: dict, text: str) -> bool:
 
 
 def reward(item: dict, text: str) -> float:
-    """검증 가능 보상(RLVR): 마지막 'Final answer'가 정답과 같으면 1, 아니면 0."""
+    """Verifiable reward (RLVR): 1 if the last 'Final answer' equals the answer, else 0."""
     return float(prob_correct(item, text)) if item["kind"] == "prob" else float(parse_final(text) == target_text(item))

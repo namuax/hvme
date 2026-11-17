@@ -1,4 +1,4 @@
-"""T1·T2·T3 문서 분할과 인과 주장 추출."""
+"""T1/T2/T3 document splitting and causal claim extraction."""
 import json
 import re
 
@@ -25,7 +25,7 @@ RELATIONS = {"causal", "correlational", "no_effect"}
 
 
 def chunk(docs: list[dict], max_chars: int = 1500) -> list[dict]:
-    """문서를 문장 경계에서 max_chars 이하 조각으로 나눈다."""
+    """Split a document at sentence boundaries into pieces of at most max_chars."""
     out = []
     for d in docs:
         buf, k = "", 0
@@ -43,7 +43,7 @@ CHANGE_KO = re.compile(r"\s*(?:증가|감소|상승|하락|증대|저하)$")
 
 
 def clean(phrase: str) -> str:
-    """변수 이름만 남긴다: 앞뒤 기호와, 'higher …'·'… 증가' 같은 증감 표현을 뗀다(증감은 polarity가 맡는다)."""
+    """Keep only the variable name: strip surrounding symbols and increase/decrease wording such as 'higher ...' or '... 증가' (polarity carries the direction of change)."""
     p = re.sub(r"\s+", " ", str(phrase).strip(" \"'`.,;:()[]")).strip()
     return CHANGE_KO.sub("", CHANGE_EN.sub("", p)).strip() or p
 
