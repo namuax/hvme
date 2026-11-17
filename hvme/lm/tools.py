@@ -403,7 +403,8 @@ def _names_in(text: str, names: list[str]) -> list[str]:
     return re.findall(rf"(?<![A-Za-z0-9_])(?:{pat})(?![A-Za-z0-9_])", text)
 
 
-KO_GIVEN = re.compile(r"주어지면|주어졌을 ?때|주어질 ?때|주어진 경우|주어진 상태에서|조건으로|조건부로|통제하면|통제했을 ?때|고정하면|고정했을 ?때")
+KO_GIVEN = re.compile(r"주어지면|주어졌을 ?때|주어질 ?때|주어진 경우|주어진 상태에서|조건으로|조건부로|통제하면|통제했을 ?때|고정하면|고정했을 ?때"
+                      r"|주었을 ?때|준 ?경우|알 ?때|알려졌을 ?때|(?:조건 ?)?하에서|일 ?때")
 
 
 def parse_relation(s: str, names: list[str]) -> tuple[frozenset, frozenset | None]:
@@ -411,9 +412,18 @@ def parse_relation(s: str, names: list[str]) -> tuple[frozenset, frozenset | Non
     indep = "independent" in s or "독립" in s
     if not indep and "correlat" not in s and "상관" not in s:
         raise ToolError(f"cannot read relation '{s}': expected 'X correlates with Y.' or 'X and Y are independent given Z.'")
+    pat = "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True))
+    m = None
+    if indep and re.search("[가-힣]", s):
+        m = (re.search(rf"(?<![A-Za-z0-9_])({pat}) ?[와과] ?({pat}) ?[은는이가]? ?(?:서로 ?)?(?:조건부 ?)?독립", s)
+             or re.search(rf"(?<![A-Za-z0-9_])({pat}) ?[와과] ?({pat}) ?[은는]", s))
     ko = KO_GIVEN.search(s)  # In Korean the condition comes first: 'C 가 주어졌을 때 A 와 B 는 독립이다.'
-    cond, main = (s[:ko.start()], s[ko.end():]) if ko else (s.partition(" given ")[2], s.partition(" given ")[0])
-    pair, given = _names_in(main, names), _names_in(cond, names)
+    if m:  # Korean independence sentence 'X 와 Y 는 독립': every other name, before or after it, is conditioned on, whatever the wording
+        pair = [m.group(1), m.group(2)]
+        given = [n for n in _names_in(s[:m.start()] + " " + s[m.end():], names) if n not in pair]
+    else:
+        cond, main = (s[:ko.start()], s[ko.end():]) if ko else (s.partition("given ")[2], s.partition("given ")[0])
+        pair, given = _names_in(main, names), _names_in(cond, names)
     if len(set(pair)) != 2 or set(given) & set(pair) or (given and not indep):
         raise ToolError(f"cannot read relation '{s}': it must name two declared variables (and the conditioning variables after 'given')")
     return frozenset(pair), frozenset(given) if indep else None

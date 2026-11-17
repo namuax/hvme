@@ -466,3 +466,14 @@ def test_engine_repair_states_and_implied_edges():
         run(med, repair=False)
     val, out = run(med)  # graph with z → m added: ATE = Σ_z P(z) Σ_m P(y|m,z)(P(m|x=1,z) − P(m|x=0,z))
     assert "the engine added z -> m" in out and val == pytest.approx(0.4 * 0.1 * 0.5 + 0.6 * 0.7 * 0.5)
+
+
+def test_parse_relation_korean_variants():
+    """Korean conditions are read however the model rewrites them ('를 주었을 때', 'given B일 때', condition after the pair)."""
+    from hvme.lm.tools import parse_relation
+    n = list("ABCDEF")
+    for s, pair, given in [("B 를 주었을 때 A 와 D 는 독립적이다.", "AD", "B"), ("given B일 때 A와 C는 독립적이다.", "AC", "B"),
+                           ("given B, A와 C는 독립적이다.", "AC", "B"), ("A 와 B 를 주었을 때 C 와 E 는 독립적이다.", "CE", "AB"),
+                           ("A와 C는 B, D를 주었을 때 독립적이다.", "AC", "BD"), ("C 가 주어졌을 때 A 와 B 는 독립이다.", "AB", "C")]:
+        assert parse_relation(s, n) == (frozenset(pair), frozenset(given)), s
+    assert parse_relation("A 는 B 와 상관관계가 있다.", n) == (frozenset("AB"), None)
