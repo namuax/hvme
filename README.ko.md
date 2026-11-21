@@ -37,7 +37,7 @@ pip install "hvme[bench]"        # 벤치마크 추가 의존성(pgmpy)
 소스에서 설치하려면 다음과 같이 한다.
 
 ```bash
-git clone https://github.com/no-wave/hvme && cd hvme
+git clone https://github.com/namuax/hvme && cd hvme
 pip install -e ".[dev,mcp,bench]"
 pytest -q --ignore=tests/test_fast_torch.py
 ```

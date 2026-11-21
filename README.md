@@ -37,7 +37,7 @@ pip install "hvme[bench]"        # benchmark extras (pgmpy)
 From source:
 
 ```bash
-git clone https://github.com/no-wave/hvme && cd hvme
+git clone https://github.com/namuax/hvme && cd hvme
 pip install -e ".[dev,mcp,bench]"
 pytest -q --ignore=tests/test_fast_torch.py
 ```

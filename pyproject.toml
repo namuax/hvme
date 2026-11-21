@@ -34,7 +34,7 @@ causal = ["dowhy", "causal-learn", "econml"]
 dev = ["pytest", "nbformat", "jupyter"]
 
 [project.urls]
-Repository = "https://github.com/no-wave/hvme"
+Repository = "https://github.com/namuax/hvme"
 
 [project.scripts]
 hvme-mcp = "hvme.mcp.server:main"
