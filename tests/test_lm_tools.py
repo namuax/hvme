@@ -42,6 +42,16 @@ def test_tool_returns_sign_when_only_sign_is_identified():
     assert val < 0 and "not point-identified, but the sign is negative in every fit" in out
 
 
+def test_tool_prints_zero_without_sign():
+    # Equal conditionals give ATE 0; fit residue (-2.7e-12) must not print as '-0.0000', which the LM reads as negative
+    z = {"variables": {"d": ["yes", "no"], "b": ["high", "low"], "h": ["healthy", "ill"]},
+         "graph": ["d -> b", "d -> h", "b -> h"],
+         "probabilities": ["P(h=healthy | d=no) = 0.37", "P(h=healthy | d=yes) = 0.37"],
+         "query": "ate", "treatment": {"d": "yes"}, "baseline": {"d": "no"}, "outcome": {"h": "healthy"}}
+    val, out = run(z)
+    assert val == 0.0 and out.endswith("= +0.0000") and "-0.0000" not in out
+
+
 def test_tool_call_roundtrip():
     assert parse_call("풀이...\n\n" + format_call(CL)) == CL
 

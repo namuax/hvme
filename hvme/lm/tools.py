@@ -373,7 +373,8 @@ def run(args: dict, restarts: int = 3, repair: bool = True) -> tuple[float, str]
     lo, hi = min(vals), max(vals)
     if hi - lo > 2e-3 and (lo * hi <= 0 or query in ("pn", "ps")):
         raise ToolError(f"not identifiable from the given probabilities (value ranges from {lo:+.4f} to {hi:+.4f})")
-    val = float(np.mean(vals)) + 0.0  # −0.0 → 0.0
+    val = float(np.mean(vals))
+    val = 0.0 if abs(val) < 5e-5 else val  # fit residue below the printed digits (e.g. -2.7e-12) would print as '-0.0000' and read as negative
     raw = {k: ", ".join(f"{a}={b}" for a, b in args.get(key, {}).items()) for k, key in (("o", "outcome"), ("t", "treatment"), ("b", "baseline"))}
     raw |= {"g": "".join(f", {a}={b}" for a, b in args.get("given", {}).items()), "m": ", ".join(q["mediators"]) or "no mediators", "f": "".join(f", {a}={b}" for a, b in args.get("fixed", {}).items()) if query == "cde" else ""}
     names = [n.format(**raw) for n, _ in terms]
