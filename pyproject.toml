@@ -10,6 +10,7 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
+authors = [{ name = "josh", email = "ai@namuax.com" }]
 dependencies = [
   "networkx>=3.3",
   "pydantic>=2.6",
@@ -22,6 +23,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Operating System :: OS Independent",
 ]
 
 [project.optional-dependencies]
@@ -34,7 +36,11 @@ causal = ["dowhy", "causal-learn", "econml"]
 dev = ["pytest", "nbformat", "jupyter"]
 
 [project.urls]
+Homepage = "https://github.com/namuax/hvme"
 Repository = "https://github.com/namuax/hvme"
+Issues = "https://github.com/namuax/hvme/issues"
+Changelog = "https://github.com/namuax/hvme/blob/main/CHANGELOG.md"
+Models = "https://huggingface.co/namuax"
 
 [project.scripts]
 hvme-mcp = "hvme.mcp.server:main"

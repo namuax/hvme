@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-11-23)
+
+- First PyPI release. Model weights are on Hugging Face: `namuax/hvme-lm-9b`, `hvme-lm-4b`, `hvme-fast-4b`, `hvme-router-4b`.
+- `FastJudge.load` reads `hvme_fast.json` (calibrated temperatures) from a Hugging Face repo id as well as from a local folder.
 
 - First public tree: causal graph schema (HCG), graph construction from tables and text, DAG validation, symbolic causal engine, Gym question generator, single-pass judge, LM tool trajectories and training code, orchestrator, MCP server (17 tools) and nine agent skills.
 - Package renamed to `hvme` (import `hvme`, CLI `hvme-mcp`, environment variables `HVME_*`).

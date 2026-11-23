@@ -4,7 +4,7 @@
 
 [English](README.md) · [한국어](README.ko.md)
 
-> 상태: v0.1.0 비공개 미리보기다. 모델 가중치는 아직 공개하지 않았다([모델](#모델)).
+> 상태: v0.1.0 첫 공개판이다. 모델 가중치는 Hugging Face에 있다([모델](#모델)).
 
 hvme은 표와 문서를 인과 DAG(HCG, *Hvme Causal Graph*)로 바꾸고, 그 DAG를 데이터로 검사한다. 인과 질문에는 언어 모델의 짐작이 아니라 기호 엔진이 계산한 수치로 답한다. 작은 LLM은 질문을 엔진 호출로 옮기고 결과를 읽어 답하도록 학습했다. 단일 패스 판정 모델은 쉬운 질문을 처리하고 확신도를 보정한다.
 
@@ -106,12 +106,12 @@ MCP 서버(도구 17개)는 `hvme-mcp`로 띄운다. LLM은 vLLM으로 서빙하
 
 | 모델 | 기반 | 쓰임 | Hugging Face |
 |---|---|---|---|
-| hvme LM 9B | Qwen3.5-9B | 주 추론 모델(tool 모드) | 공개 예정 |
-| hvme LM 4B | Qwen3.5-4B | 가벼운 모델 | 공개 예정 |
-| hvme Fast 4B | Qwen3.5-4B | 단일 패스 판정 | 공개 예정 |
-| hvme Router 4B | Qwen3.5-4B | Rung 분류(영어·한국어) | 공개 예정 |
+| hvme LM 9B | Qwen3.5-9B | 주 추론 모델(tool 모드) | [`namuax/hvme-lm-9b`](https://huggingface.co/namuax/hvme-lm-9b) |
+| hvme LM 4B | Qwen3.5-4B | 가벼운 모델 | [`namuax/hvme-lm-4b`](https://huggingface.co/namuax/hvme-lm-4b) |
+| hvme Fast 4B | Qwen3.5-4B | 단일 패스 판정 | [`namuax/hvme-fast-4b`](https://huggingface.co/namuax/hvme-fast-4b) |
+| hvme Router 4B | Qwen3.5-4B | Rung 분류(영어·한국어) | [`namuax/hvme-router-4b`](https://huggingface.co/namuax/hvme-router-4b) |
 
-가중치가 공개되기 전에도 `api.ask_v1`, `fast_*`, `classify_question`, `lm_verify`를 뺀 나머지는 모두 돈다.
+`api.ask_v1`, `fast_*`, `classify_question`, `lm_verify`를 뺀 나머지는 가중치 없이도 돈다.
 
 ## 재현
 
@@ -128,4 +128,4 @@ MCP 서버(도구 17개)는 `hvme-mcp`로 띄운다. LLM은 vLLM으로 서빙하
 
 ## 라이선스
 
-코드는 [Apache License 2.0](LICENSE)으로 공개한다. 모델 가중치는 공개되면 기반 모델인 Qwen3.5의 라이선스도 함께 따른다.
+코드는 [Apache License 2.0](LICENSE)으로 공개한다. 모델 가중치는 기반 모델인 Qwen3.5의 라이선스도 함께 따른다.

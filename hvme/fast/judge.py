@@ -31,6 +31,19 @@ def confidence(p: np.ndarray) -> float:
     return float(1 + (p * np.log(p)).sum() / np.log(len(p)))
 
 
+def _find_meta(path_or_id: str) -> Path | None:
+    """hvme_fast.json next to the weights: a local folder, or a Hugging Face repo id such as namuax/hvme-fast-4b."""
+    local = Path(path_or_id)
+    if local.exists():
+        meta = local / "hvme_fast.json"
+        return meta if meta.exists() else None
+    try:
+        from huggingface_hub import hf_hub_download
+        return Path(hf_hub_download(path_or_id, "hvme_fast.json"))
+    except Exception:
+        return None
+
+
 class FastJudge:
     supports_logits = True
 
@@ -45,9 +58,9 @@ class FastJudge:
         tok = AutoTokenizer.from_pretrained(path_or_id, padding_side="left")
         tok.pad_token = tok.pad_token or tok.eos_token
         model = AutoModelForCausalLM.from_pretrained(path_or_id, dtype=dtype, device_map=device).eval()
-        meta = Path(path_or_id) / "hvme_fast.json"
-        temp = json.loads(meta.read_text())["temperature"] if meta.exists() else {}
-        return cls(model, tok, Path(path_or_id).name if meta.exists() else path_or_id, temp, **kw)
+        meta = _find_meta(path_or_id)
+        temp = json.loads(meta.read_text())["temperature"] if meta else {}
+        return cls(model, tok, Path(path_or_id).name if meta else path_or_id, temp, **kw)
 
     def save_temperature(self, path: str | Path) -> Path:
         """Change only the temperatures in hvme_fast.json, leaving the weights as is."""

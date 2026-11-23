@@ -2,9 +2,9 @@
 
 **Verifiable causal graphs + a tool-using causal reasoning LLM + a symbolic causal engine, behind one orchestrator and an MCP server.**
 
-[English](README.md) · [한국어](README.ko.md)
+[English](https://github.com/namuax/hvme/blob/main/README.md) · [한국어](https://github.com/namuax/hvme/blob/main/README.ko.md)
 
-> Status: v0.1.0, private preview. Model weights are not published yet (see [Models](#models)).
+> Status: v0.1.0, first public release. Model weights are on Hugging Face (see [Models](https://github.com/namuax/hvme#models)).
 
 hvme turns tables and documents into a causal DAG (HCG, *Hvme Causal Graph*), checks the DAG against the data, and answers causal questions with numbers that come from a symbolic engine rather than from the language model's guess. A small LLM is trained to translate a question into engine calls and to read the result back; a single-pass judge routes easy questions and calibrates confidence.
 
@@ -62,7 +62,7 @@ api.engine_counterfactual("marketing", "data.csv", "ad_spend", "sales", "nie", [
 api.ask("광고비를 늘리면 매출이 오르는가?", "marketing", "data.csv")
 ```
 
-Examples: [`01_quickstart.py`](examples/01_quickstart.py) (full chain, no GPU) · [`02_graph_from_table.py`](examples/02_graph_from_table.py) · [`03_gym_generate.py`](examples/03_gym_generate.py) · [MCP setup](examples/04_mcp_server.md) · [vLLM serving](examples/05_serve_vllm.md)
+Examples: [`01_quickstart.py`](https://github.com/namuax/hvme/blob/main/examples/01_quickstart.py) (full chain, no GPU) · [`02_graph_from_table.py`](https://github.com/namuax/hvme/blob/main/examples/02_graph_from_table.py) · [`03_gym_generate.py`](https://github.com/namuax/hvme/blob/main/examples/03_gym_generate.py) · [MCP setup](https://github.com/namuax/hvme/blob/main/examples/04_mcp_server.md) · [vLLM serving](https://github.com/namuax/hvme/blob/main/examples/05_serve_vllm.md)
 
 MCP server (17 tools: `graph_*`, `validate_run`, `engine_*`, `ask`, `fast_*`, `classify_question`, `lm_verify`, `ask_v1`):
 
@@ -79,7 +79,7 @@ HVME_LM_URL=http://127.0.0.1:8011/v1 HVME_LM=<model> python -c "from hvme import
 
 ## Results
 
-Measured on our own runs; the raw numbers are in [`bench/`](bench/). The 9B model is Qwen3.5-9B fine-tuned with LoRA on engine-verified tool trajectories (tool mode: the model calls the engine). The base model answers without tools.
+Measured on our own runs; the raw numbers are in [`bench/`](https://github.com/namuax/hvme/tree/main/bench/). The 9B model is Qwen3.5-9B fine-tuned with LoRA on engine-verified tool trajectories (tool mode: the model calls the engine). The base model answers without tools.
 
 | Benchmark | Base Qwen3.5-9B (no tools) | hvme 9B |
 |---|---|---|
@@ -99,9 +99,9 @@ Caveats: the Korean sets are machine translations that passed automatic checks (
 
 ## How it works
 
-![How hvme answers a causal question](assets/architecture.svg)
+![How hvme answers a causal question](https://raw.githubusercontent.com/namuax/hvme/main/assets/architecture.svg)
 
-More: [architecture](docs/architecture.md) · [HCG format](docs/hcg.md) · [engine](docs/engine.md) · [LM tools](docs/tools.md) · [training](docs/training.md) · [evaluation](docs/evaluation.md)
+More: [architecture](https://github.com/namuax/hvme/blob/main/docs/architecture.md) · [HCG format](https://github.com/namuax/hvme/blob/main/docs/hcg.md) · [engine](https://github.com/namuax/hvme/blob/main/docs/engine.md) · [LM tools](https://github.com/namuax/hvme/blob/main/docs/tools.md) · [training](https://github.com/namuax/hvme/blob/main/docs/training.md) · [evaluation](https://github.com/namuax/hvme/blob/main/docs/evaluation.md)
 
 | Package | Role |
 |---|---|
@@ -119,12 +119,12 @@ More: [architecture](docs/architecture.md) · [HCG format](docs/hcg.md) · [engi
 
 | Model | Base | Use | Hugging Face |
 |---|---|---|---|
-| hvme LM 9B | Qwen3.5-9B | main reasoning model (tool mode) | to be published |
-| hvme LM 4B | Qwen3.5-4B | light model | to be published |
-| hvme Fast 4B | Qwen3.5-4B | single-pass judge | to be published |
-| hvme Router 4B | Qwen3.5-4B | Rung classifier (English and Korean) | to be published |
+| hvme LM 9B | Qwen3.5-9B | main reasoning model (tool mode) | [`namuax/hvme-lm-9b`](https://huggingface.co/namuax/hvme-lm-9b) |
+| hvme LM 4B | Qwen3.5-4B | light model | [`namuax/hvme-lm-4b`](https://huggingface.co/namuax/hvme-lm-4b) |
+| hvme Fast 4B | Qwen3.5-4B | single-pass judge | [`namuax/hvme-fast-4b`](https://huggingface.co/namuax/hvme-fast-4b) |
+| hvme Router 4B | Qwen3.5-4B | Rung classifier (English and Korean) | [`namuax/hvme-router-4b`](https://huggingface.co/namuax/hvme-router-4b) |
 
-Until the weights are published, everything except `api.ask_v1`, `fast_*`, `classify_question` and `lm_verify` runs without them.
+Everything except `api.ask_v1`, `fast_*`, `classify_question` and `lm_verify` runs without the weights.
 
 ## Reproducing
 
@@ -141,4 +141,4 @@ Until the weights are published, everything except `api.ask_v1`, `fast_*`, `clas
 
 ## License
 
-Code is released under the [Apache License 2.0](LICENSE). Model weights, once published, also follow the license of their Qwen3.5 base models.
+Code is released under the [Apache License 2.0](https://github.com/namuax/hvme/blob/main/LICENSE). Model weights also follow the license of their Qwen3.5 base models.
