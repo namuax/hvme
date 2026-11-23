@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hvme"
-version = "0.1.0"
+version = "0.1.1"
 description = "Verifiable causal graphs, a tool-using causal reasoning LLM and a symbolic causal engine, tied together by an orchestrator and an MCP server"
 readme = "README.md"
 license = "Apache-2.0"

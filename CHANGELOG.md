@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 (2026-11-23)
+
+- README and `bench/` numbers now come from the published models: LM 9B v2.19 (CaLM-lite 91.8, CauGym 75.7, CLadder 150 90.0, KoCLadder 0.787 as the mean of three runs, KoCorr2Cause 0.976) and Router 4B ko3 seed 1 (CLadder Rung 0.997, KoCLadder Rung 0.987). 0.1.0 showed numbers from an earlier checkpoint.
+- `hvme.__version__` matches the package version (0.1.0 reported 0.0.1).
+- GitHub Actions moved to Node 24 releases (checkout v5, setup-python v6, upload/download-artifact v7).
+
 ## 0.1.0 (2026-11-23)
 
 - First PyPI release. Model weights are on Hugging Face: `namuax/hvme-lm-9b`, `hvme-lm-4b`, `hvme-fast-4b`, `hvme-router-4b`.

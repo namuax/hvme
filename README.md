@@ -83,19 +83,19 @@ Measured on our own runs; the raw numbers are in [`bench/`](https://github.com/n
 
 | Benchmark | Base Qwen3.5-9B (no tools) | hvme 9B |
 |---|---|---|
-| CaLM-lite (45 English tasks × 30) | 51.0 | **91.5** |
-| CauGym (6 sets × 7 types × 15) | 31.3 | **75.6** |
-| Target metric (mean of the two above) | 41.1 | **83.6** |
-| CLadder 150 (base: CausalCoT 8k, hvme: tool mode) | 86.7 | **90.7** |
+| CaLM-lite (45 English tasks × 30) | 51.0 | **91.8** |
+| CauGym (6 sets × 7 types × 15) | 31.3 | **75.7** |
+| Target metric (mean of the two above) | 41.1 | **83.7** |
+| CLadder 150 (base: CausalCoT 8k, hvme: tool mode) | 86.7 | **90.0** |
 | Corr2Cause (300, F1) | — | **0.923** |
-| KoCLadder (528, Korean, machine-translated) | — | 0.758 (English same items 0.907) |
-| KoCorr2Cause (1,157, Korean, machine-translated) | — | 0.963 |
+| KoCLadder (528, Korean, machine-translated, mean of 3 runs) | — | 0.787 (English same items 0.917) |
+| KoCorr2Cause (1,157, Korean, machine-translated) | — | 0.976 (English 0.976) |
 
-Single-pass judge (Qwen3.5-4B, one forward pass, calibrated): CLadder 600 0.843, CauGym yes/no 2,500 0.751. Rung router: CLadder Rung 0.992, KoCLadder Rung 0.983.
+Single-pass judge (Qwen3.5-4B, one forward pass, calibrated): CLadder 600 0.843, CauGym yes/no 2,500 0.751. Rung router: CLadder Rung 0.997, KoCLadder Rung 0.987.
 
 General ability is kept: MATH-500 and KMMLU stay within about 1 point of the base model.
 
-Caveats: the Korean sets are machine translations that passed automatic checks (numbers, back-translation polarity, comparison order) and have not been reviewed by people yet. Single training runs differ by up to about 8 items on CLadder 150 and 2 points on KMMLU; smaller gaps are noise.
+Caveats: the Korean sets are machine translations that passed automatic checks (numbers, back-translation polarity, comparison order) and have not been reviewed by people yet. Single training runs differ by up to about 8 items on CLadder 150 and 2 points on KMMLU; smaller gaps are noise. One KoCLadder run moves by up to about 3 points between vLLM runs, so the table gives the mean of three.
 
 ## How it works
 
@@ -136,7 +136,7 @@ Everything except `api.ask_v1`, `fast_*`, `classify_question` and `lm_verify` ru
 
 - The engine works on binary and linear SCMs. Other mechanisms need a different estimator.
 - The LM still fails to translate some free-form passages into engine arguments (most remaining CLadder and CauGym errors are "no answer").
-- Korean performance trails English by about 15 points on KoCLadder.
+- Korean performance trails English by about 13 points on KoCLadder (0.787 vs 0.917 on the same items).
 - Graphs from text depend on the extraction LLM. Edges that only an LLM prior supports are marked as such and should be checked.
 
 ## License

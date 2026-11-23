@@ -1,17 +1,40 @@
 {
- "model": "hvme Router 4B (Rung classifier, seed 0)",
+ "model": "hvme Router 4B (Rung classifier with a yes/no head, ko3 seed 1; namuax/hvme-router-4b)",
  "sets": {
   "rung_cladder600": {
    "n": 600,
-   "accuracy": 0.9917
+   "accuracy": 0.9967,
+   "ece": 0.0019
   },
   "rung_kocladder": {
-   "n": 542,
-   "accuracy": 0.9834
+   "n": 528,
+   "accuracy": 0.9867,
+   "ece": 0.0107
   },
   "rung_demo": {
    "n": 18,
-   "accuracy": 0.7222
+   "accuracy": 0.8889,
+   "ece": 0.0755
+  },
+  "cladder600": {
+   "n": 600,
+   "accuracy": 0.825,
+   "ece": 0.0424
+  },
+  "corr2cause": {
+   "n": 1162,
+   "accuracy": 0.8003,
+   "ece": 0.0356
+  },
+  "caugym_yn": {
+   "n": 2500,
+   "accuracy": 0.7564,
+   "ece": 0.1062
+  },
+  "calm_b": {
+   "n": 2300,
+   "accuracy": 0.7422,
+   "ece": 0.0661
   }
  }
 }
