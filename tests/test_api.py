@@ -35,6 +35,34 @@ def test_api_flow(files):
     json.dumps(out, ensure_ascii=False, default=str)
 
 
+def test_api_errors(files):
+    with pytest.raises(ValueError, match=r"unknown variable\(s\) \['revenue'\].*ad_spend"):
+        api.engine_estimate("m", files["csv"], "ad_spend", "revenue")
+    with pytest.raises(ValueError, match="unknown variable"):
+        api.engine_counterfactual("m", files["csv"], "ad_spend", "sales", "nie", ["visits"])
+    with pytest.raises(ValueError, match="unknown query"):
+        api.engine_counterfactual("m", files["csv"], "ad_spend", "sales", "cate")
+    with pytest.raises(FileNotFoundError, match="known graphs"):
+        api.engine_identify("nope", "ad_spend", "sales")
+
+
+def test_model_defaults():
+    import os
+    import subprocess
+    import sys
+    env = {k: v for k, v in os.environ.items() if k not in ("HVME_FAST", "HVME_ROUTER", "HVME_LM")}
+    out = subprocess.run([sys.executable, "-c", "from hvme import api; print(api.FAST_PATH, api.ROUTER_PATH, api.LM_PATH)"],
+                         env=env, capture_output=True, text=True, check=True).stdout.split()
+    assert out == ["namuax/hvme-fast-4b", "namuax/hvme-router-4b", "namuax/hvme-lm-9b"]
+
+
+def test_mcp_version():
+    pytest.importorskip("mcp")
+    import hvme
+    from hvme.mcp.server import mcp
+    assert mcp._mcp_server.create_initialization_options().server_version == hvme.__version__
+
+
 def test_mcp_tools():
     pytest.importorskip("mcp")
     import asyncio

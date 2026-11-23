@@ -73,8 +73,8 @@ hvme-mcp
 Serving the LLM with vLLM and pointing hvme at it:
 
 ```bash
-vllm serve <model> --served-model-name hvme-lm --port 8011
-HVME_LM_URL=http://127.0.0.1:8011/v1 HVME_LM=<model> python -c "from hvme import api; print(api.ask_v1('...', 'marketing', 'data.csv'))"
+vllm serve namuax/hvme-lm-9b --served-model-name hvme-lm --port 8011
+HVME_LM_URL=http://127.0.0.1:8011/v1 python -c "from hvme import api; print(api.ask_v1('...', 'marketing', 'data.csv'))"
 ```
 
 ## Results
@@ -124,7 +124,7 @@ More: [architecture](https://github.com/namuax/hvme/blob/main/docs/architecture.
 | hvme Fast 4B | Qwen3.5-4B | single-pass judge | [`namuax/hvme-fast-4b`](https://huggingface.co/namuax/hvme-fast-4b) |
 | hvme Router 4B | Qwen3.5-4B | Rung classifier (English and Korean) | [`namuax/hvme-router-4b`](https://huggingface.co/namuax/hvme-router-4b) |
 
-Everything except `api.ask_v1`, `fast_*`, `classify_question` and `lm_verify` runs without the weights.
+Everything except `api.ask_v1`, `fast_*`, `classify_question` and `lm_verify` runs without the weights. Those four download the models above on first use (`pip install "hvme[hf]"`, a GPU recommended). Set `HVME_FAST`, `HVME_ROUTER` or `HVME_LM` to another repo id or a local folder to override.
 
 ## Reproducing
 

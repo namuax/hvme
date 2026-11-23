@@ -18,7 +18,7 @@ from .graph.tabular import tabular_to_hcg
 from .graph.text import link_nodes, merge_hcg, text_to_hcg
 from .orchestrator import Orchestrator
 from .orchestrator.analysis import fit_scm, latent_of
-from .paths import GRAPHS, RESULTS, ROOT
+from .paths import GRAPHS, RESULTS
 from .providers.spec import from_spec
 from .validate import validate_hcg
 
@@ -30,7 +30,18 @@ def _path(graph_id: str) -> Path:
 
 
 def _load(graph_id: str) -> HCG:
+    if not _path(graph_id).exists():
+        raise FileNotFoundError(f"graph '{graph_id}' not found in {GRAPHS}; known graphs: {graph_list()}")
     return HCG.load(_path(graph_id))
+
+
+def _graph(graph_id: str, *names: str):
+    """The graph as networkx, after checking that every named variable is a node."""
+    g = _load(graph_id).to_networkx()
+    unknown = [n for n in names if n not in g]
+    if unknown:
+        raise ValueError(f"unknown variable(s) {unknown} in graph '{graph_id}'; variables: {sorted(g.nodes)}")
+    return g
 
 
 def _llm(spec: str | None):
@@ -106,27 +117,29 @@ def validate_run(graph_id: str, csv: str, n_perm: int = 100) -> dict:
 # ---------- causal engine ----------
 def engine_identify(graph_id: str, treatment: str, outcome: str, csv: str | None = None) -> dict:
     """Identification (backdoor -> frontdoor -> IV). If csv is given, nodes missing from the data are treated as unobserved."""
-    g = _load(graph_id).to_networkx()
+    g = _graph(graph_id, treatment, outcome)
     lat = latent_of(g, pd.read_csv(csv, nrows=1)) if csv else []
     e = identify(g, treatment, outcome, lat)
     return {"strategy": e.strategy, "variables": sorted(e.variables), "expression": e.expression, "latent": lat}
 
 
 def engine_estimate(graph_id: str, csv: str, treatment: str, outcome: str, n_boot: int = 200) -> dict:
-    g, df = _load(graph_id).to_networkx(), pd.read_csv(csv)
+    g, df = _graph(graph_id, treatment, outcome), pd.read_csv(csv)
     est = estimate(g, df, treatment, outcome, latent_of(g, df), n_boot=n_boot)
     return {"strategy": est.estimand.strategy, "variables": sorted(est.estimand.variables), "method": est.method,
             "value": est.value, "se": est.se, "ci": list(est.ci)}
 
 
 def engine_refute(graph_id: str, csv: str, treatment: str, outcome: str) -> list[dict]:
-    g, df = _load(graph_id).to_networkx(), pd.read_csv(csv)
+    g, df = _graph(graph_id, treatment, outcome), pd.read_csv(csv)
     return refute(g, df, treatment, outcome, latent_of(g, df)).to_dict("records")
 
 
 def engine_counterfactual(graph_id: str, csv: str, treatment: str, outcome: str, query: str = "ett", mediators: list | None = None) -> dict:
     """Compute a counterfactual query on a binary SCM fitted from the data. query: ate, ett, nde, nie, pn, ps."""
-    g, df = _load(graph_id).to_networkx(), pd.read_csv(csv)
+    if query not in ("ate", "ett", "nde", "nie", "pn", "ps"):
+        raise ValueError(f"unknown query '{query}'; use one of ate, ett, nde, nie, pn, ps")
+    g, df = _graph(graph_id, treatment, outcome, *(mediators or [])), pd.read_csv(csv)
     scm: BinarySCM = fit_scm(g, df, [treatment, outcome, *(mediators or [])])
     args = (treatment, outcome, mediators or []) if query in ("nde", "nie") else (treatment, outcome)
     return {"query": query, "value": getattr(scm, query)(*args), "exact": scm.exact, "nodes": sorted(scm.graph.nodes)}
@@ -146,12 +159,12 @@ def ask(question: str, graph_id: str, csv: str, experiment_csv: str | None = Non
 
 # ---------- v1: Hvme-Fast and Hvme-LM ----------
 # Model paths and devices are set through environment variables. Loaded once on first use and reused within the process.
-FAST_PATH = os.environ.get("HVME_FAST", str(ROOT / "models" / "hvme-fast-4b-v2-story-distill"))
-LM_PATH = os.environ.get("HVME_LM", str(ROOT / "models" / "hvme-lm-9b-sft-v217b"))
+# Defaults are the published Hugging Face models (downloaded on first use); set the variables to a repo id or a local folder to override.
+FAST_PATH = os.environ.get("HVME_FAST", "namuax/hvme-fast-4b")
+LM_PATH = os.environ.get("HVME_LM", "namuax/hvme-lm-9b")
 THRESHOLD = float(os.environ.get("HVME_FAST_THRESHOLD", "0.8"))  # escalate if Fast confidence (max option probability) is below this
 # Rung classification is handled by a router further trained on Rung items (CLadder Rung 0.515 -> 0.967). Yes/no judgment stays on FAST_PATH because Corr2Cause regresses with the router.
-_ROUTER = ROOT / "models" / "hvme-fast-4b-v2-router-ko"
-ROUTER_PATH = os.environ.get("HVME_ROUTER", str(_ROUTER) if _ROUTER.exists() else FAST_PATH)
+ROUTER_PATH = os.environ.get("HVME_ROUTER", "namuax/hvme-router-4b")
 ROUTER_THRESHOLD = float(os.environ.get("HVME_ROUTER_THRESHOLD", "0.9"))  # if router confidence is below this, Hvme-LM picks the Rung
 _MODELS: dict = {}
 
@@ -224,7 +237,7 @@ def lm_verify(graph_id: str, csv: str, treatment: str, outcome: str) -> dict:
     """Hvme-LM (tool mode) reads the probability table fitted from the graph + data, solves 'does the treatment raise the outcome?' independently, and compares with the engine ATE sign."""
     from .orchestrator.route import lm_verify as verify
     hcg, df = _load(graph_id), pd.read_csv(csv)
-    g = hcg.to_networkx()
+    g = _graph(graph_id, treatment, outcome)
     lat = latent_of(g, df)
     est = estimate(g, df, treatment, outcome, lat, n_boot=200, estimand=identify(g, treatment, outcome, lat))
     return verify(_lm(), hcg, df, treatment, outcome, est.value, tuple(map(float, est.ci)))

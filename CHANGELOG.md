@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 (2026-11-23)
+
+- Model defaults are the published Hugging Face models: `HVME_FAST` = `namuax/hvme-fast-4b`, `HVME_ROUTER` = `namuax/hvme-router-4b`, `HVME_LM` = `namuax/hvme-lm-9b`. In 0.1.1 they pointed at local folders under `HVME_HOME`, so `fast_*`, `classify_question`, `lm_verify` and `ask_v1` failed with an `OSError` unless the variables were set, and Rung routing fell back to the Fast model.
+- Engine functions check variable names against the graph and raise `ValueError` listing the graph's variables (was a bare `KeyError`); an unknown graph id lists the known graphs; `engine_counterfactual` rejects an unknown query.
+- The MCP server reports the hvme version in `serverInfo` (was the mcp library version).
+
 ## 0.1.1 (2026-11-23)
 
 - README and `bench/` numbers now come from the published models: LM 9B v2.19 (CaLM-lite 91.8, CauGym 75.7, CLadder 150 90.0, KoCLadder 0.787 as the mean of three runs, KoCorr2Cause 0.976) and Router 4B ko3 seed 1 (CLadder Rung 0.997, KoCLadder Rung 0.987). 0.1.0 showed numbers from an earlier checkpoint.

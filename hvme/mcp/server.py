@@ -1,19 +1,20 @@
 """hvme-mcp: exposes the Hvme graph, validation, causal engine and orchestrator as MCP tools.
 
-Run: python -m hvme.mcp   (stdio). Example Claude Desktop/Code config:
-  {"mcpServers": {"hvme": {"command": "python", "args": ["-m", "hvme.mcp"], "cwd": "<hvme repo>", "env": {"HVME_LLM": "anthropic:claude-sonnet-5-5"}}}}
+Run: hvme-mcp (or python -m hvme.mcp), stdio. Example Claude Desktop/Code config:
+  {"mcpServers": {"hvme": {"command": "hvme-mcp", "env": {"HVME_HOME": "<work folder>", "HVME_LLM": "anthropic:claude-sonnet-5-5"}}}}
 Tool names follow the hvme.graph.* / hvme.engine.* / hvme.validate.* namespaces, adapted to MCP naming rules (letters, digits, _).
 """
 import json
 
 from mcp.server.fastmcp import FastMCP
 
-from .. import api
+from .. import __version__, api
 
 mcp = FastMCP("hvme", instructions=(
     "Hvme causal toolkit. Build a causal graph (HCG) from a CSV and/or documents, validate it against data, then answer causal questions. "
     "Typical flow: graph_from_table → (graph_from_text → graph_merge) → validate_run → ask. "
     "Every causal number must come from these tools; report the evidence path, assumptions and graph sensitivity that `ask` returns."))
+mcp._mcp_server.version = __version__  # FastMCP has no version argument; without this the server reports the mcp library version
 
 
 def _json(x) -> str:

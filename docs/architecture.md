@@ -57,8 +57,8 @@ The router is a 4B single-pass classifier. When its confidence is below the thre
 | `HVME_HOME` | repository root | where `data/`, `models/` and `results/` live |
 | `HVME_LLM` | — | LLM for graph construction and question analysis, e.g. `hf:Qwen/Qwen3.5-9B@cuda:0`, `anthropic:<model>`, `replay:<file>` |
 | `HVME_LM_URL`, `HVME_LM_NAME` | — , `hvme-lm` | OpenAI-compatible server (vLLM) for the LM |
-| `HVME_LM`, `HVME_LM_DEVICE` | `models/hvme-lm-9b-…`, `cuda:0` | local LM weights when no URL is set |
-| `HVME_FAST`, `HVME_FAST_THRESHOLD`, `HVME_FAST_DEVICE` | `models/hvme-fast-4b-…`, 0.8, `cuda:0` | single-pass judge |
-| `HVME_ROUTER`, `HVME_ROUTER_THRESHOLD` | `models/hvme-fast-4b-v2-router-ko`, 0.9 | Rung router |
+| `HVME_LM`, `HVME_LM_DEVICE` | `namuax/hvme-lm-9b`, `cuda:0` | LM weights (Hugging Face repo id or local folder) when no URL is set; with a URL, only the tokenizer |
+| `HVME_FAST`, `HVME_FAST_THRESHOLD`, `HVME_FAST_DEVICE` | `namuax/hvme-fast-4b`, 0.8, `cuda:0` | single-pass judge (repo id or local folder) |
+| `HVME_ROUTER`, `HVME_ROUTER_THRESHOLD` | `namuax/hvme-router-4b`, 0.9 | Rung router (repo id or local folder; uses `HVME_FAST_DEVICE`) |
 
 LLM responses can be recorded with `CachedProvider` and replayed without a GPU with `ReplayProvider`, so notebooks and tests are reproducible.

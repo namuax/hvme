@@ -111,7 +111,7 @@ MCP 서버(도구 17개)는 `hvme-mcp`로 띄운다. LLM은 vLLM으로 서빙하
 | hvme Fast 4B | Qwen3.5-4B | 단일 패스 판정 | [`namuax/hvme-fast-4b`](https://huggingface.co/namuax/hvme-fast-4b) |
 | hvme Router 4B | Qwen3.5-4B | Rung 분류(영어·한국어) | [`namuax/hvme-router-4b`](https://huggingface.co/namuax/hvme-router-4b) |
 
-`api.ask_v1`, `fast_*`, `classify_question`, `lm_verify`를 뺀 나머지는 가중치 없이도 돈다.
+`api.ask_v1`, `fast_*`, `classify_question`, `lm_verify`를 뺀 나머지는 가중치 없이도 돈다. 이 넷은 처음 쓸 때 위 모델을 Hugging Face에서 내려받는다(`pip install "hvme[hf]"`, GPU 권장). 다른 저장소나 로컬 폴더를 쓰려면 `HVME_FAST`, `HVME_ROUTER`, `HVME_LM`을 지정한다.
 
 ## 재현
 
